@@ -1,0 +1,16 @@
+{
+  "ratios": [
+    {
+      "name": "rpn_vs_tree",
+      "lhs": "eml_ln_rpn_eval",
+      "rhs": "eml_ln_tree_eval",
+      "max": 1.30
+    },
+    {
+      "name": "bytecode_vs_tree",
+      "lhs": "eml_ln_bytecode_eval",
+      "rhs": "eml_ln_tree_eval",
+      "max": 1.35
+    }
+  ]
+}

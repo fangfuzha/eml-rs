@@ -1,0 +1,9 @@
+[package]
+name = "eml-lowering"
+version = "0.1.0"
+edition = "2021"
+description = "Standalone parser/lowering crate for EML expressions."
+license = "MIT"
+
+[dependencies]
+num-complex = { version = "0.4", default-features = false, features = ["libm"] }
