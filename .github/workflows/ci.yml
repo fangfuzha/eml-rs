@@ -5,7 +5,33 @@ on:
   pull_request:
 
 jobs:
-  rust:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Check all targets
+        run: cargo check --all-targets
+      - name: Run tests
+        run: cargo test --all-targets
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  no_std:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,13 +41,62 @@ jobs:
         run: rustup target add thumbv7em-none-eabihf
       - name: Check no_std core crate
         run: cargo check -p eml-core --target thumbv7em-none-eabihf
-      - name: Check formatting
-        run: cargo fmt -- --check
-      - name: Run tests
-        run: cargo test --all-targets
-      - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Enforce coverage thresholds
+        run: cargo llvm-cov --workspace --all-features --all-targets --summary-only --fail-under-lines 80 --fail-under-regions 70
+
+  compat:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["1.75.0", stable]
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: ${{ matrix.target }}
+      - name: Check workspace on target
+        run: cargo check --workspace --all-targets --target ${{ matrix.target }}
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+      - name: Run cargo audit
+        run: cargo audit
+      - name: Run cargo deny
+        run: cargo deny check licenses bans
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
       - name: Run benchmarks
         run: cargo bench --bench eval_bench
       - name: Benchmark regression gate
         run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
+      - name: Ensure release build for C ABI path
+        run: cargo build --release -q

@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![no_std]
 //! no_std core EML primitives and numeric policies.
 //!

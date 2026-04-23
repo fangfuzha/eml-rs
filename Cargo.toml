@@ -6,6 +6,7 @@ resolver = "2"
 name = "eml-rs"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.75"
 description = "Minimal EML operator library skeleton: core + IR + verification."
 license = "MIT"
 
@@ -13,8 +14,8 @@ license = "MIT"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-eml-core = { path = "crates/eml-core" }
-eml-lowering = { path = "crates/eml-lowering" }
+eml-core = { version = "0.1.0", path = "crates/eml-core" }
+eml-lowering = { version = "0.1.0", path = "crates/eml-lowering" }
 num-complex = "0.4"
 
 [dev-dependencies]

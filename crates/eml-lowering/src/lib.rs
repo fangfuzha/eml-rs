@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![no_std]
 //! Standalone parser/lowering crate for EML.
 //!

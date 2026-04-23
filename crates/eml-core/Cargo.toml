@@ -2,6 +2,7 @@
 name = "eml-core"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.75"
 description = "no_std core EML primitives and numeric policies."
 license = "MIT"
 

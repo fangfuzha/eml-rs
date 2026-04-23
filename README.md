@@ -14,6 +14,21 @@
 
 项目目标不是“EML 一定比原生算子快”，而是先获得统一可控的中间表示，再按目标平台做最优部署。
 
+## 文档入口 / Documentation
+
+- 文档索引 / Docs index: `docs/README.md`
+- 论文摘要与工程指导: `docs/eml-paper-summary.md`
+- 范围声明 / Scope: `docs/scope.md`
+- 验收标准 / Acceptance: `docs/acceptance.md`
+- 架构设计 / Architecture: `docs/architecture.md`
+- 使用者指南 / User guide: `docs/user-guide.md`
+- 开发者指南 / Developer guide: `docs/developer-guide.md`
+- 版本策略 / Versioning: `docs/versioning.md`
+- 测试与质量 / Testing: `docs/testing.md`
+- 可观测性 / Observability: `docs/observability.md`
+- 维护策略 / Maintenance: `docs/maintenance.md`
+- 合规说明 / Compliance: `docs/compliance.md`
+
 ## 2. EML 在各个领域的作用（你问的核心）
 
 ### 2.1 数学与符号层（表达统一）
@@ -51,8 +66,11 @@
 ## 3. 项目结构
 
 - `src/core.rs`: EML 原子算子、分支策略、特殊值策略
+- `src/error.rs`: 统一错误码、诊断信息
 - `src/ir.rs`: `Expr` IR、RPN、统计信息
 - `src/bytecode.rs`: 寄存器字节码执行器（含 CSE/常量折叠）
+- `src/api.rs`: 高层 pipeline API（parse/opt/lower/compile/eval/verify）
+- `src/plugin.rs`: 自定义 pass / backend / observer 扩展点
 - `src/opt.rs`: 源表达式重写与代价模型
 - `src/verify.rs`: 数值对照验证
 - `src/ffi.rs`: C ABI 导出
@@ -118,6 +136,7 @@ cargo check --all-targets
 
 ```bash
 cargo run --example symbolic_regression_loop
+cargo run --example pipeline_api
 ```
 
 ### 5.3 C ABI 示例
