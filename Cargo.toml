@@ -1,0 +1,16 @@
+[package]
+name = "eml-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal EML operator library skeleton: core + IR + verification."
+license = "MIT"
+
+[dependencies]
+num-complex = "0.4"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "eval_bench"
+harness = false
