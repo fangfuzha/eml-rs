@@ -85,12 +85,23 @@
 - `softmax_template(logits)`
 - `logsumexp_template(logits)`
 - `cross_entropy_template(logits, target_index)`（one-hot）
+- `label_smoothing_cross_entropy_template(logits, target_index, epsilon)`
+- `focal_loss_template(logits, target_index, gamma)`
+- `focal_loss_template_with_alpha(logits, target_index, gamma, alpha)`
 - `batch_softmax_template(batch_logits)`
 - `batch_cross_entropy_template(batch_logits, targets)`
 - `batch_cross_entropy_mean_template(batch_logits, targets)`
+- `batch_label_smoothing_cross_entropy_template(...)`
+- `batch_label_smoothing_cross_entropy_mean_template(...)`
+- `batch_focal_loss_template(...)`
+- `batch_focal_loss_template_with_alpha(...)`
+- `batch_focal_loss_mean_template(...)`
+- `batch_focal_loss_mean_template_with_alpha(...)`
 
 ### 4.4 自动微分与反降级
 - `symbolic_derivative(expr, var_index)`：对 `SourceExpr` 做符号微分
+- `simplify_source_expr(expr)`：梯度表达式局部代数简化与常量折叠
+- `source_expr_node_count(expr)`：表达式规模统计（用于防止梯度树膨胀）
 - `delower_to_source(lowered)`：把纯 EML 树回升为源表达（`exp - log` 形式）
 - `raise_expr_to_source(expr)`：把运行时 `Expr` 回升到 `SourceExpr`
 
@@ -146,7 +157,7 @@ cargo build --release
 
 ## 9. 后续方向
 
-- 扩展更多训练模板（label smoothing、focal loss、多任务损失拼接）
-- 自动微分进一步工程化（公共子式共享、梯度表达简化、Jacobian/Hessian）
+- 扩展更多训练模板（label smoothing/focal loss 已完成，后续补 label-distribution 与多任务损失拼接）
+- 自动微分进一步工程化（公共子式共享、梯度表达 CSE、Jacobian/Hessian）
 - 反降级器与平台后端对接（直接映射到目标框架算子图）
 - 建立 CI 性能回归基线与多平台数值基线

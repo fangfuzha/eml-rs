@@ -28,6 +28,8 @@
 
 ## P5: 训练工程能力增强
 - [x] 增加 SourceExpr 自动微分（symbolic derivative）与梯度对照测试
+- [x] 自动微分表达式简化（局部代数化简 + 常量折叠）以抑制梯度树膨胀
 - [x] 增加 batch 级 softmax / cross_entropy / mean-CE 模板
+- [x] 增加 label smoothing / focal loss（含 batch + mean 模板）
 - [x] 增加 de-lowering（EML IR -> source）与语义一致性测试
 - [x] 扩展 benchmark 与 gate（新增 softmax-CE bytecode/tree 比值规则）

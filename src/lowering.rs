@@ -10,11 +10,21 @@ use crate::ir::Expr;
 use crate::EmlError;
 
 pub use eml_lowering::{
-    batch_cross_entropy_mean_template, batch_cross_entropy_template, batch_softmax_template,
+    batch_cross_entropy_mean_template, batch_cross_entropy_template,
+    batch_focal_loss_mean_template, batch_focal_loss_mean_template_with_alpha,
+    batch_focal_loss_template, batch_focal_loss_template_with_alpha,
+    batch_label_smoothing_cross_entropy_mean_template,
+    batch_label_smoothing_cross_entropy_template, batch_softmax_template,
 };
-pub use eml_lowering::{cross_entropy_template, logsumexp_template, softmax_template};
+pub use eml_lowering::{
+    cross_entropy_template, focal_loss_template, focal_loss_template_with_alpha,
+    label_smoothing_cross_entropy_template, logsumexp_template, softmax_template,
+};
 pub use eml_lowering::{delower_to_source, eval_lowered_expr_complex};
-pub use eml_lowering::{eval_source_expr_complex, parse_source_expr, symbolic_derivative};
+pub use eml_lowering::{
+    eval_source_expr_complex, parse_source_expr, simplify_source_expr, source_expr_node_count,
+    symbolic_derivative,
+};
 pub use eml_lowering::{LoweredExpr, LoweringError, SourceExpr};
 
 /// Lowers a source expression into standalone EML-only tree (`LoweredExpr`).

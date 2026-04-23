@@ -2,9 +2,10 @@ use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::core::{EvalPolicy, LogBranchPolicy};
 use eml_rs::ir::{eval_rpn_complex, Expr};
 use eml_rs::lowering::{
-    batch_cross_entropy_mean_template, cross_entropy_template, delower_to_source,
+    batch_cross_entropy_mean_template, batch_focal_loss_mean_template_with_alpha,
+    batch_label_smoothing_cross_entropy_mean_template, cross_entropy_template, delower_to_source,
     eval_lowered_expr_complex, eval_source_expr_complex, lower_to_eml, lower_to_lowered_eml,
-    parse_source_expr, softmax_template, symbolic_derivative,
+    parse_source_expr, softmax_template, source_expr_node_count, symbolic_derivative,
 };
 use eml_rs::opt::{estimate_cost, optimize_for_lowering};
 use eml_rs::verify::{verify_against_complex_ref, verify_against_real_ref};
@@ -238,4 +239,65 @@ fn delowering_backend_preserves_lowered_semantics() {
     let lowered_v = eval_lowered_expr_complex(&lowered, &vars).unwrap();
     let raised_v = eval_source_expr_complex(&raised, &vars).unwrap();
     assert!((lowered_v - raised_v).norm() <= 1e-12);
+}
+
+#[test]
+fn batch_label_smoothing_and_focal_templates_are_lowerable() {
+    let batch_logits = vec![
+        vec![
+            parse_source_expr("x0").unwrap(),
+            parse_source_expr("x1 + 0.5").unwrap(),
+            parse_source_expr("x2 - 0.25").unwrap(),
+        ],
+        vec![
+            parse_source_expr("x3").unwrap(),
+            parse_source_expr("x4 + 1").unwrap(),
+            parse_source_expr("x5").unwrap(),
+        ],
+    ];
+    let targets = vec![0usize, 2usize];
+    let ls_mean = batch_label_smoothing_cross_entropy_mean_template(
+        &batch_logits,
+        &targets,
+        eml_rs::lowering::SourceExpr::Rational(1, 10),
+    )
+    .unwrap();
+    let fl_mean = batch_focal_loss_mean_template_with_alpha(
+        &batch_logits,
+        &targets,
+        eml_rs::lowering::SourceExpr::Int(2),
+        eml_rs::lowering::SourceExpr::Rational(1, 4),
+    )
+    .unwrap();
+    let ls_eml = lower_to_eml(&ls_mean).unwrap();
+    let fl_eml = lower_to_eml(&fl_mean).unwrap();
+
+    let vars = vec![
+        Complex64::new(0.3, 0.0),
+        Complex64::new(1.1, 0.0),
+        Complex64::new(-0.4, 0.0),
+        Complex64::new(0.7, 0.0),
+        Complex64::new(-0.2, 0.0),
+        Complex64::new(0.4, 0.0),
+    ];
+    let relaxed = EvalPolicy::relaxed();
+
+    let ls_ref = eval_source_expr_complex(&ls_mean, &vars).unwrap();
+    let ls_eval = ls_eml.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    assert!((ls_ref - ls_eval).norm() <= 2e-5);
+
+    let fl_ref = eval_source_expr_complex(&fl_mean, &vars).unwrap();
+    let fl_eval = fl_eml.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    assert!((fl_ref - fl_eval).norm() <= 2e-5);
+}
+
+#[test]
+fn symbolic_derivative_keeps_tree_compact_for_power() {
+    let source = parse_source_expr("x0^8").unwrap();
+    let deriv = symbolic_derivative(&source, 0);
+    assert!(source_expr_node_count(&deriv) <= 12, "{deriv:?}");
+    let vars = [Complex64::new(2.0, 0.0)];
+    let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
+    let numeric = finite_diff_real(&source, &vars, 0, 1e-6);
+    assert!((analytic - numeric).abs() <= 1e-3);
 }

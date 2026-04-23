@@ -238,6 +238,80 @@ pub fn cross_entropy_template(
     ))
 }
 
+/// Builds one-hot label-smoothing cross-entropy template from logits.
+///
+/// Formula:
+/// `LSCE(z, t, eps) = logsumexp(z) - ((1-eps) * z_t + eps * mean(z))`.
+pub fn label_smoothing_cross_entropy_template(
+    logits: &[SourceExpr],
+    target_index: usize,
+    epsilon: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    if logits.is_empty() {
+        return Err(LoweringError::Domain("logits vector must not be empty"));
+    }
+    if target_index >= logits.len() {
+        return Err(LoweringError::Domain(
+            "target_index must be within logits range",
+        ));
+    }
+
+    let lse = logsumexp_template(logits)?;
+    let mut sum = src_zero();
+    for logit in logits {
+        sum = src_add(sum, logit.clone());
+    }
+    let class_count = i64::try_from(logits.len())
+        .map_err(|_| LoweringError::Overflow("class count does not fit i64"))?;
+    let mean_logit = src_div(sum, SourceExpr::Int(class_count));
+    let one_minus_eps = src_sub(src_one(), epsilon.clone());
+    let blended = src_add(
+        src_mul(one_minus_eps, logits[target_index].clone()),
+        src_mul(epsilon, mean_logit),
+    );
+    Ok(src_sub(lse, blended))
+}
+
+/// Builds focal-loss template from logits with `alpha = 1`.
+///
+/// Formula:
+/// `FL(z, t) = (1 - p_t)^gamma * CE(z, t)`, where `p_t = softmax_t(z)`.
+pub fn focal_loss_template(
+    logits: &[SourceExpr],
+    target_index: usize,
+    gamma: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    focal_loss_template_with_alpha(logits, target_index, gamma, src_one())
+}
+
+/// Builds focal-loss template from logits with explicit `alpha` weight.
+///
+/// Formula:
+/// `FL(z, t) = alpha * (1 - p_t)^gamma * CE(z, t)`.
+pub fn focal_loss_template_with_alpha(
+    logits: &[SourceExpr],
+    target_index: usize,
+    gamma: SourceExpr,
+    alpha: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    if logits.is_empty() {
+        return Err(LoweringError::Domain("logits vector must not be empty"));
+    }
+    if target_index >= logits.len() {
+        return Err(LoweringError::Domain(
+            "target_index must be within logits range",
+        ));
+    }
+
+    let lse = logsumexp_template(logits)?;
+    let z_t = logits[target_index].clone();
+    let p_t = src_exp(src_sub(z_t.clone(), lse.clone()));
+    let one_minus_pt = src_sub(src_one(), p_t);
+    let modulating = src_pow(one_minus_pt, gamma);
+    let ce = src_sub(lse, z_t);
+    Ok(src_mul(alpha, src_mul(modulating, ce)))
+}
+
 /// Builds batched softmax templates from a batch of logits vectors.
 ///
 /// Each entry in `batch_logits` represents one sample's logits.
@@ -286,6 +360,103 @@ pub fn batch_cross_entropy_mean_template(
     targets: &[usize],
 ) -> Result<SourceExpr, LoweringError> {
     let losses = batch_cross_entropy_template(batch_logits, targets)?;
+    mean_over_batch(losses, targets.len())
+}
+
+/// Builds batched one-hot label-smoothing cross-entropy templates.
+pub fn batch_label_smoothing_cross_entropy_template(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    epsilon: SourceExpr,
+) -> Result<Vec<SourceExpr>, LoweringError> {
+    if batch_logits.is_empty() {
+        return Err(LoweringError::Domain("batch logits must not be empty"));
+    }
+    if batch_logits.len() != targets.len() {
+        return Err(LoweringError::Domain(
+            "batch logits and targets must have the same length",
+        ));
+    }
+
+    let mut out = Vec::with_capacity(batch_logits.len());
+    for (logits, target) in batch_logits.iter().zip(targets.iter().copied()) {
+        out.push(label_smoothing_cross_entropy_template(
+            logits,
+            target,
+            epsilon.clone(),
+        )?);
+    }
+    Ok(out)
+}
+
+/// Builds mean label-smoothing cross-entropy over a batch.
+pub fn batch_label_smoothing_cross_entropy_mean_template(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    epsilon: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    let losses = batch_label_smoothing_cross_entropy_template(batch_logits, targets, epsilon)?;
+    mean_over_batch(losses, targets.len())
+}
+
+/// Builds batched focal-loss templates with `alpha = 1`.
+pub fn batch_focal_loss_template(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    gamma: SourceExpr,
+) -> Result<Vec<SourceExpr>, LoweringError> {
+    batch_focal_loss_template_with_alpha(batch_logits, targets, gamma, src_one())
+}
+
+/// Builds batched focal-loss templates with explicit `alpha`.
+pub fn batch_focal_loss_template_with_alpha(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    gamma: SourceExpr,
+    alpha: SourceExpr,
+) -> Result<Vec<SourceExpr>, LoweringError> {
+    if batch_logits.is_empty() {
+        return Err(LoweringError::Domain("batch logits must not be empty"));
+    }
+    if batch_logits.len() != targets.len() {
+        return Err(LoweringError::Domain(
+            "batch logits and targets must have the same length",
+        ));
+    }
+
+    let mut out = Vec::with_capacity(batch_logits.len());
+    for (logits, target) in batch_logits.iter().zip(targets.iter().copied()) {
+        out.push(focal_loss_template_with_alpha(
+            logits,
+            target,
+            gamma.clone(),
+            alpha.clone(),
+        )?);
+    }
+    Ok(out)
+}
+
+/// Builds mean focal-loss over a batch with `alpha = 1`.
+pub fn batch_focal_loss_mean_template(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    gamma: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    batch_focal_loss_mean_template_with_alpha(batch_logits, targets, gamma, src_one())
+}
+
+/// Builds mean focal-loss over a batch with explicit `alpha`.
+pub fn batch_focal_loss_mean_template_with_alpha(
+    batch_logits: &[Vec<SourceExpr>],
+    targets: &[usize],
+    gamma: SourceExpr,
+    alpha: SourceExpr,
+) -> Result<SourceExpr, LoweringError> {
+    let losses = batch_focal_loss_template_with_alpha(batch_logits, targets, gamma, alpha)?;
+    mean_over_batch(losses, targets.len())
+}
+
+fn mean_over_batch(losses: Vec<SourceExpr>, batch_len: usize) -> Result<SourceExpr, LoweringError> {
     let mut iter = losses.into_iter();
     let mut sum = iter
         .next()
@@ -293,8 +464,7 @@ pub fn batch_cross_entropy_mean_template(
     for loss in iter {
         sum = src_add(sum, loss);
     }
-
-    let batch_size = i64::try_from(targets.len())
+    let batch_size = i64::try_from(batch_len)
         .map_err(|_| LoweringError::Overflow("batch size does not fit i64"))?;
     Ok(src_div(sum, SourceExpr::Int(batch_size)))
 }
@@ -304,6 +474,99 @@ pub fn batch_cross_entropy_mean_template(
 /// The result is another [`SourceExpr`] and can be lowered/evaluated like any
 /// other source expression.
 pub fn symbolic_derivative(expr: &SourceExpr, var_index: usize) -> SourceExpr {
+    simplify_source_expr(&symbolic_derivative_impl(expr, var_index))
+}
+
+/// Simplifies a source expression using local algebraic/constant-folding rules.
+pub fn simplify_source_expr(expr: &SourceExpr) -> SourceExpr {
+    match expr {
+        SourceExpr::Var(index) => SourceExpr::Var(*index),
+        SourceExpr::Int(n) => SourceExpr::Int(*n),
+        SourceExpr::Rational(p, q) => match normalize_rational(*p as i128, *q as i128) {
+            Some((num, den)) => {
+                rational_expr_from_i128(num, den).unwrap_or(SourceExpr::Rational(*p, *q))
+            }
+            None => SourceExpr::Rational(*p, *q),
+        },
+        SourceExpr::ConstE => SourceExpr::ConstE,
+        SourceExpr::ConstI => SourceExpr::ConstI,
+        SourceExpr::ConstPi => SourceExpr::ConstPi,
+        SourceExpr::Neg(x) => src_neg(simplify_source_expr(x)),
+        SourceExpr::Add(a, b) => src_add(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Sub(a, b) => src_sub(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Mul(a, b) => src_mul(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Div(a, b) => src_div(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Pow(a, b) => src_pow(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Exp(x) => src_exp(simplify_source_expr(x)),
+        SourceExpr::Log(x) => src_log(simplify_source_expr(x)),
+        SourceExpr::Sin(x) => SourceExpr::Sin(src_box(simplify_source_expr(x))),
+        SourceExpr::Cos(x) => SourceExpr::Cos(src_box(simplify_source_expr(x))),
+        SourceExpr::Tan(x) => SourceExpr::Tan(src_box(simplify_source_expr(x))),
+        SourceExpr::Sinh(x) => SourceExpr::Sinh(src_box(simplify_source_expr(x))),
+        SourceExpr::Cosh(x) => SourceExpr::Cosh(src_box(simplify_source_expr(x))),
+        SourceExpr::Tanh(x) => SourceExpr::Tanh(src_box(simplify_source_expr(x))),
+        SourceExpr::Asin(x) => SourceExpr::Asin(src_box(simplify_source_expr(x))),
+        SourceExpr::Acos(x) => SourceExpr::Acos(src_box(simplify_source_expr(x))),
+        SourceExpr::Atan(x) => SourceExpr::Atan(src_box(simplify_source_expr(x))),
+        SourceExpr::Sqrt(x) => SourceExpr::Sqrt(src_box(simplify_source_expr(x))),
+        SourceExpr::Sigmoid(x) => SourceExpr::Sigmoid(src_box(simplify_source_expr(x))),
+        SourceExpr::Softplus(x) => SourceExpr::Softplus(src_box(simplify_source_expr(x))),
+        SourceExpr::Swish(x) => SourceExpr::Swish(src_box(simplify_source_expr(x))),
+        SourceExpr::GeluTanh(x) => SourceExpr::GeluTanh(src_box(simplify_source_expr(x))),
+        SourceExpr::ReluSoft(x) => SourceExpr::ReluSoft(src_box(simplify_source_expr(x))),
+        SourceExpr::Elu(x, alpha) => SourceExpr::Elu(
+            src_box(simplify_source_expr(x)),
+            src_box(simplify_source_expr(alpha)),
+        ),
+        SourceExpr::LeakyRelu(x, slope) => SourceExpr::LeakyRelu(
+            src_box(simplify_source_expr(x)),
+            src_box(simplify_source_expr(slope)),
+        ),
+        SourceExpr::Softsign(x) => SourceExpr::Softsign(src_box(simplify_source_expr(x))),
+        SourceExpr::Mish(x) => SourceExpr::Mish(src_box(simplify_source_expr(x))),
+    }
+}
+
+/// Returns total node count in a source expression tree.
+pub fn source_expr_node_count(expr: &SourceExpr) -> usize {
+    1 + match expr {
+        SourceExpr::Var(_)
+        | SourceExpr::Int(_)
+        | SourceExpr::Rational(_, _)
+        | SourceExpr::ConstE
+        | SourceExpr::ConstI
+        | SourceExpr::ConstPi => 0,
+        SourceExpr::Neg(x)
+        | SourceExpr::Exp(x)
+        | SourceExpr::Log(x)
+        | SourceExpr::Sin(x)
+        | SourceExpr::Cos(x)
+        | SourceExpr::Tan(x)
+        | SourceExpr::Sinh(x)
+        | SourceExpr::Cosh(x)
+        | SourceExpr::Tanh(x)
+        | SourceExpr::Asin(x)
+        | SourceExpr::Acos(x)
+        | SourceExpr::Atan(x)
+        | SourceExpr::Sqrt(x)
+        | SourceExpr::Sigmoid(x)
+        | SourceExpr::Softplus(x)
+        | SourceExpr::Swish(x)
+        | SourceExpr::GeluTanh(x)
+        | SourceExpr::ReluSoft(x)
+        | SourceExpr::Softsign(x)
+        | SourceExpr::Mish(x) => source_expr_node_count(x),
+        SourceExpr::Add(a, b)
+        | SourceExpr::Sub(a, b)
+        | SourceExpr::Mul(a, b)
+        | SourceExpr::Div(a, b)
+        | SourceExpr::Pow(a, b)
+        | SourceExpr::Elu(a, b)
+        | SourceExpr::LeakyRelu(a, b) => source_expr_node_count(a) + source_expr_node_count(b),
+    }
+}
+
+fn symbolic_derivative_impl(expr: &SourceExpr, var_index: usize) -> SourceExpr {
     match expr {
         SourceExpr::Var(index) => {
             if *index == var_index {
@@ -317,25 +580,25 @@ pub fn symbolic_derivative(expr: &SourceExpr, var_index: usize) -> SourceExpr {
         | SourceExpr::ConstE
         | SourceExpr::ConstI
         | SourceExpr::ConstPi => src_zero(),
-        SourceExpr::Neg(x) => src_neg(symbolic_derivative(x, var_index)),
+        SourceExpr::Neg(x) => src_neg(symbolic_derivative_impl(x, var_index)),
         SourceExpr::Add(a, b) => src_add(
-            symbolic_derivative(a, var_index),
-            symbolic_derivative(b, var_index),
+            symbolic_derivative_impl(a, var_index),
+            symbolic_derivative_impl(b, var_index),
         ),
         SourceExpr::Sub(a, b) => src_sub(
-            symbolic_derivative(a, var_index),
-            symbolic_derivative(b, var_index),
+            symbolic_derivative_impl(a, var_index),
+            symbolic_derivative_impl(b, var_index),
         ),
         SourceExpr::Mul(a, b) => {
-            let da = symbolic_derivative(a, var_index);
-            let db = symbolic_derivative(b, var_index);
+            let da = symbolic_derivative_impl(a, var_index);
+            let db = symbolic_derivative_impl(b, var_index);
             let av = (**a).clone();
             let bv = (**b).clone();
             src_add(src_mul(da, bv.clone()), src_mul(av, db))
         }
         SourceExpr::Div(a, b) => {
-            let da = symbolic_derivative(a, var_index);
-            let db = symbolic_derivative(b, var_index);
+            let da = symbolic_derivative_impl(a, var_index);
+            let db = symbolic_derivative_impl(b, var_index);
             let av = (**a).clone();
             let bv = (**b).clone();
             let numerator = src_sub(src_mul(da, bv.clone()), src_mul(av, db));
@@ -343,103 +606,117 @@ pub fn symbolic_derivative(expr: &SourceExpr, var_index: usize) -> SourceExpr {
             src_div(numerator, denominator)
         }
         SourceExpr::Pow(a, b) => {
-            let da = symbolic_derivative(a, var_index);
-            let db = symbolic_derivative(b, var_index);
+            let da = symbolic_derivative_impl(a, var_index);
+            let db = symbolic_derivative_impl(b, var_index);
             let av = (**a).clone();
             let bv = (**b).clone();
-            let lhs = src_mul(db, SourceExpr::Log(src_box(av.clone())));
+            if is_zero_expr(&db) {
+                let b_minus_one = src_sub(bv.clone(), src_one());
+                return src_mul(src_mul(bv, src_pow(av.clone(), b_minus_one)), da);
+            }
+            if is_zero_expr(&da) {
+                return src_mul(src_mul(src_pow(av.clone(), bv.clone()), src_log(av)), db);
+            }
+            let lhs = src_mul(db, src_log(av.clone()));
             let rhs = src_mul(bv.clone(), src_div(da, av.clone()));
             src_mul(src_pow(av, bv), src_add(lhs, rhs))
         }
         SourceExpr::Exp(x) => {
-            let dx = symbolic_derivative(x, var_index);
-            src_mul(SourceExpr::Exp(src_box((**x).clone())), dx)
+            let dx = symbolic_derivative_impl(x, var_index);
+            src_mul(src_exp((**x).clone()), dx)
         }
         SourceExpr::Log(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_div(dx, (**x).clone())
         }
         SourceExpr::Sin(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_mul(SourceExpr::Cos(src_box((**x).clone())), dx)
         }
         SourceExpr::Cos(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_mul(src_neg(SourceExpr::Sin(src_box((**x).clone()))), dx)
         }
         SourceExpr::Tan(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let denom = src_pow(SourceExpr::Cos(src_box((**x).clone())), src_two());
             src_div(dx, denom)
         }
         SourceExpr::Sinh(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_mul(SourceExpr::Cosh(src_box((**x).clone())), dx)
         }
         SourceExpr::Cosh(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_mul(SourceExpr::Sinh(src_box((**x).clone())), dx)
         }
         SourceExpr::Tanh(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let denom = src_pow(SourceExpr::Cosh(src_box((**x).clone())), src_two());
             src_div(dx, denom)
         }
         SourceExpr::Asin(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let inner = src_sub(src_one(), src_pow((**x).clone(), src_two()));
             src_div(dx, SourceExpr::Sqrt(src_box(inner)))
         }
         SourceExpr::Acos(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let inner = src_sub(src_one(), src_pow((**x).clone(), src_two()));
             src_neg(src_div(dx, SourceExpr::Sqrt(src_box(inner))))
         }
         SourceExpr::Atan(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_div(dx, src_add(src_one(), src_pow((**x).clone(), src_two())))
         }
         SourceExpr::Sqrt(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let denom = src_mul(src_two(), SourceExpr::Sqrt(src_box((**x).clone())));
             src_div(dx, denom)
         }
         SourceExpr::Sigmoid(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             let sig = SourceExpr::Sigmoid(src_box((**x).clone()));
             src_mul(dx, src_mul(sig.clone(), src_sub(src_one(), sig)))
         }
         SourceExpr::Softplus(x) => {
-            let dx = symbolic_derivative(x, var_index);
+            let dx = symbolic_derivative_impl(x, var_index);
             src_mul(dx, SourceExpr::Sigmoid(src_box((**x).clone())))
         }
         SourceExpr::Swish(x) => {
-            let expanded = src_mul((**x).clone(), SourceExpr::Sigmoid(src_box((**x).clone())));
-            symbolic_derivative(&expanded, var_index)
+            let dx = symbolic_derivative_impl(x, var_index);
+            let xv = (**x).clone();
+            let sig = SourceExpr::Sigmoid(src_box(xv.clone()));
+            let term = src_add(
+                sig.clone(),
+                src_mul(xv, src_mul(sig.clone(), src_sub(src_one(), sig))),
+            );
+            src_mul(dx, term)
         }
         SourceExpr::GeluTanh(x) => {
-            let expanded = expand_gelu_tanh((**x).clone());
-            symbolic_derivative(&expanded, var_index)
+            let expanded = simplify_source_expr(&expand_gelu_tanh((**x).clone()));
+            symbolic_derivative_impl(&expanded, var_index)
         }
         SourceExpr::ReluSoft(x) => {
             let expanded = SourceExpr::Softplus(src_box((**x).clone()));
-            symbolic_derivative(&expanded, var_index)
+            symbolic_derivative_impl(&expanded, var_index)
         }
         SourceExpr::Elu(x, alpha) => {
-            let expanded = expand_elu((**x).clone(), (**alpha).clone());
-            symbolic_derivative(&expanded, var_index)
+            let expanded = simplify_source_expr(&expand_elu((**x).clone(), (**alpha).clone()));
+            symbolic_derivative_impl(&expanded, var_index)
         }
         SourceExpr::LeakyRelu(x, slope) => {
-            let expanded = expand_leaky_relu((**x).clone(), (**slope).clone());
-            symbolic_derivative(&expanded, var_index)
+            let expanded =
+                simplify_source_expr(&expand_leaky_relu((**x).clone(), (**slope).clone()));
+            symbolic_derivative_impl(&expanded, var_index)
         }
         SourceExpr::Softsign(x) => {
-            let expanded = expand_softsign((**x).clone());
-            symbolic_derivative(&expanded, var_index)
+            let expanded = simplify_source_expr(&expand_softsign((**x).clone()));
+            symbolic_derivative_impl(&expanded, var_index)
         }
         SourceExpr::Mish(x) => {
-            let expanded = expand_mish((**x).clone());
-            symbolic_derivative(&expanded, var_index)
+            let expanded = simplify_source_expr(&expand_mish((**x).clone()));
+            symbolic_derivative_impl(&expanded, var_index)
         }
     }
 }
@@ -498,28 +775,275 @@ fn src_two() -> SourceExpr {
     SourceExpr::Int(2)
 }
 
+fn src_exp(x: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&x) {
+        return src_one();
+    }
+    if let SourceExpr::Log(inner) = x {
+        return *inner;
+    }
+    SourceExpr::Exp(src_box(x))
+}
+
+fn src_log(x: SourceExpr) -> SourceExpr {
+    if is_one_expr(&x) {
+        return src_zero();
+    }
+    if let SourceExpr::Exp(inner) = x {
+        return *inner;
+    }
+    SourceExpr::Log(src_box(x))
+}
+
 fn src_neg(x: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&x) {
+        return src_zero();
+    }
+    if let Some((n, d)) = as_rational_const(&x) {
+        if let Some(expr) = rational_expr_from_i128(-(n as i128), d as i128) {
+            return expr;
+        }
+    }
+    if let SourceExpr::Neg(inner) = x {
+        return *inner;
+    }
     SourceExpr::Neg(src_box(x))
 }
 
 fn src_add(a: SourceExpr, b: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&a) {
+        return b;
+    }
+    if is_zero_expr(&b) {
+        return a;
+    }
+    if let Some(expr) = try_fold_add(&a, &b) {
+        return expr;
+    }
+    if a == b {
+        return src_mul(src_two(), a);
+    }
     SourceExpr::Add(src_box(a), src_box(b))
 }
 
 fn src_sub(a: SourceExpr, b: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&b) {
+        return a;
+    }
+    if is_zero_expr(&a) {
+        return src_neg(b);
+    }
+    if a == b {
+        return src_zero();
+    }
+    if let Some(expr) = try_fold_sub(&a, &b) {
+        return expr;
+    }
     SourceExpr::Sub(src_box(a), src_box(b))
 }
 
 fn src_mul(a: SourceExpr, b: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&a) || is_zero_expr(&b) {
+        return src_zero();
+    }
+    if is_one_expr(&a) {
+        return b;
+    }
+    if is_one_expr(&b) {
+        return a;
+    }
+    if is_minus_one_expr(&a) {
+        return src_neg(b);
+    }
+    if is_minus_one_expr(&b) {
+        return src_neg(a);
+    }
+    if let Some(expr) = try_fold_mul(&a, &b) {
+        return expr;
+    }
     SourceExpr::Mul(src_box(a), src_box(b))
 }
 
 fn src_div(a: SourceExpr, b: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&a) {
+        return src_zero();
+    }
+    if is_one_expr(&b) {
+        return a;
+    }
+    if is_minus_one_expr(&b) {
+        return src_neg(a);
+    }
+    if let Some(expr) = try_fold_div(&a, &b) {
+        return expr;
+    }
     SourceExpr::Div(src_box(a), src_box(b))
 }
 
 fn src_pow(a: SourceExpr, b: SourceExpr) -> SourceExpr {
+    if is_zero_expr(&b) {
+        return src_one();
+    }
+    if is_one_expr(&b) {
+        return a;
+    }
+    if is_one_expr(&a) {
+        return src_one();
+    }
+    if is_zero_expr(&a) {
+        if let Some((n, d)) = as_rational_const(&b) {
+            if d == 1 && n > 0 {
+                return src_zero();
+            }
+        }
+    }
+    if let Some(expr) = try_fold_pow(&a, &b) {
+        return expr;
+    }
     SourceExpr::Pow(src_box(a), src_box(b))
+}
+
+fn is_zero_expr(expr: &SourceExpr) -> bool {
+    matches!(as_rational_const(expr), Some((0, _)))
+}
+
+fn is_one_expr(expr: &SourceExpr) -> bool {
+    matches!(as_rational_const(expr), Some((1, 1)))
+}
+
+fn is_minus_one_expr(expr: &SourceExpr) -> bool {
+    matches!(as_rational_const(expr), Some((-1, 1)))
+}
+
+fn as_rational_const(expr: &SourceExpr) -> Option<(i64, i64)> {
+    match expr {
+        SourceExpr::Int(n) => Some((*n, 1)),
+        SourceExpr::Rational(p, q) => {
+            let (num, den) = normalize_rational(*p as i128, *q as i128)?;
+            let num_i64 = i64::try_from(num).ok()?;
+            let den_i64 = i64::try_from(den).ok()?;
+            Some((num_i64, den_i64))
+        }
+        _ => None,
+    }
+}
+
+fn try_fold_add(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
+    let (an, ad) = as_rational_const(a)?;
+    let (bn, bd) = as_rational_const(b)?;
+    rational_expr_from_i128(
+        (an as i128) * (bd as i128) + (bn as i128) * (ad as i128),
+        (ad as i128) * (bd as i128),
+    )
+}
+
+fn try_fold_sub(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
+    let (an, ad) = as_rational_const(a)?;
+    let (bn, bd) = as_rational_const(b)?;
+    rational_expr_from_i128(
+        (an as i128) * (bd as i128) - (bn as i128) * (ad as i128),
+        (ad as i128) * (bd as i128),
+    )
+}
+
+fn try_fold_mul(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
+    let (an, ad) = as_rational_const(a)?;
+    let (bn, bd) = as_rational_const(b)?;
+    rational_expr_from_i128((an as i128) * (bn as i128), (ad as i128) * (bd as i128))
+}
+
+fn try_fold_div(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
+    let (an, ad) = as_rational_const(a)?;
+    let (bn, bd) = as_rational_const(b)?;
+    if bn == 0 {
+        return None;
+    }
+    rational_expr_from_i128((an as i128) * (bd as i128), (ad as i128) * (bn as i128))
+}
+
+fn try_fold_pow(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
+    let (base_n, base_d) = as_rational_const(a)?;
+    let (exp_n, exp_d) = as_rational_const(b)?;
+    if exp_d != 1 {
+        return None;
+    }
+
+    let exp = exp_n;
+    if exp == 0 {
+        return Some(src_one());
+    }
+    if exp > 0 {
+        let n = pow_i128_checked(base_n as i128, exp as u32)?;
+        let d = pow_i128_checked(base_d as i128, exp as u32)?;
+        return rational_expr_from_i128(n, d);
+    }
+
+    let abs_exp = (-exp) as u32;
+    let n = pow_i128_checked(base_n as i128, abs_exp)?;
+    let d = pow_i128_checked(base_d as i128, abs_exp)?;
+    if n == 0 {
+        return None;
+    }
+    rational_expr_from_i128(d, n)
+}
+
+fn normalize_rational(num: i128, den: i128) -> Option<(i128, i128)> {
+    if den == 0 {
+        return None;
+    }
+    let mut n = num;
+    let mut d = den;
+    if d < 0 {
+        n = -n;
+        d = -d;
+    }
+    let g = gcd_i128(n, d)?;
+    Some((n / g, d / g))
+}
+
+fn rational_expr_from_i128(num: i128, den: i128) -> Option<SourceExpr> {
+    let (n, d) = normalize_rational(num, den)?;
+    if n < i64::MIN as i128 || n > i64::MAX as i128 {
+        return None;
+    }
+    if d < i64::MIN as i128 || d > i64::MAX as i128 {
+        return None;
+    }
+    let ni = n as i64;
+    let di = d as i64;
+    if di == 1 {
+        Some(SourceExpr::Int(ni))
+    } else {
+        Some(SourceExpr::Rational(ni, di))
+    }
+}
+
+fn gcd_i128(a: i128, b: i128) -> Option<i128> {
+    let mut x = a.checked_abs()?;
+    let mut y = b.checked_abs()?;
+    if y == 0 {
+        return Some(if x == 0 { 1 } else { x });
+    }
+    while y != 0 {
+        let t = x % y;
+        x = y;
+        y = t;
+    }
+    Some(if x == 0 { 1 } else { x })
+}
+
+fn pow_i128_checked(mut base: i128, mut exp: u32) -> Option<i128> {
+    let mut acc = 1i128;
+    while exp > 0 {
+        if (exp & 1) == 1 {
+            acc = acc.checked_mul(base)?;
+        }
+        exp >>= 1;
+        if exp > 0 {
+            base = base.checked_mul(base)?;
+        }
+    }
+    Some(acc)
 }
 
 fn expand_gelu_tanh(z: SourceExpr) -> SourceExpr {
@@ -1493,6 +2017,104 @@ mod tests {
     }
 
     #[test]
+    fn vector_templates_for_label_smoothing_and_focal() {
+        let logits = vec![
+            SourceExpr::var(0),
+            SourceExpr::Add(Box::new(SourceExpr::var(1)), Box::new(SourceExpr::Int(1))),
+            SourceExpr::Sub(Box::new(SourceExpr::var(2)), Box::new(SourceExpr::Int(1))),
+        ];
+        let ls = label_smoothing_cross_entropy_template(&logits, 1, SourceExpr::Rational(1, 10))
+            .unwrap();
+        let focal = focal_loss_template_with_alpha(
+            &logits,
+            1,
+            SourceExpr::Int(2),
+            SourceExpr::Rational(1, 4),
+        )
+        .unwrap();
+        let vars = [
+            Complex64::new(0.1, 0.0),
+            Complex64::new(0.5, 0.0),
+            Complex64::new(-0.2, 0.0),
+        ];
+
+        let ls_val = eval_source_expr_complex(&ls, &vars).unwrap().re;
+        let focal_val = eval_source_expr_complex(&focal, &vars).unwrap().re;
+
+        let z0 = 0.1_f64;
+        let z1 = 1.5_f64;
+        let z2 = -1.2_f64;
+        let lse = (z0.exp() + z1.exp() + z2.exp()).ln();
+        let mean = (z0 + z1 + z2) / 3.0;
+        let expected_ls = lse - (0.9 * z1 + 0.1 * mean);
+        assert!((ls_val - expected_ls).abs() <= 1e-12);
+
+        let p_t = (z1 - lse).exp();
+        let ce = lse - z1;
+        let expected_focal = 0.25 * (1.0 - p_t).powf(2.0) * ce;
+        assert!((focal_val - expected_focal).abs() <= 1e-12);
+    }
+
+    #[test]
+    fn batch_label_smoothing_and_focal_mean_templates_match_manual_mean() {
+        let batch_logits = vec![
+            vec![SourceExpr::var(0), SourceExpr::var(1), SourceExpr::var(2)],
+            vec![
+                SourceExpr::var(3),
+                SourceExpr::Add(Box::new(SourceExpr::var(4)), Box::new(SourceExpr::Int(1))),
+                SourceExpr::var(5),
+            ],
+        ];
+        let targets = vec![1usize, 2usize];
+        let ls_losses = batch_label_smoothing_cross_entropy_template(
+            &batch_logits,
+            &targets,
+            SourceExpr::Rational(1, 10),
+        )
+        .unwrap();
+        let ls_mean = batch_label_smoothing_cross_entropy_mean_template(
+            &batch_logits,
+            &targets,
+            SourceExpr::Rational(1, 10),
+        )
+        .unwrap();
+
+        let focal_losses = batch_focal_loss_template_with_alpha(
+            &batch_logits,
+            &targets,
+            SourceExpr::Int(2),
+            SourceExpr::Rational(1, 4),
+        )
+        .unwrap();
+        let focal_mean = batch_focal_loss_mean_template_with_alpha(
+            &batch_logits,
+            &targets,
+            SourceExpr::Int(2),
+            SourceExpr::Rational(1, 4),
+        )
+        .unwrap();
+
+        let vars = [
+            Complex64::new(0.2, 0.0),
+            Complex64::new(0.7, 0.0),
+            Complex64::new(-0.1, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(-0.2, 0.0),
+            Complex64::new(0.3, 0.0),
+        ];
+
+        let ls0 = eval_source_expr_complex(&ls_losses[0], &vars).unwrap();
+        let ls1 = eval_source_expr_complex(&ls_losses[1], &vars).unwrap();
+        let ls_avg = eval_source_expr_complex(&ls_mean, &vars).unwrap();
+        assert!((ls_avg - (ls0 + ls1) / Complex64::new(2.0, 0.0)).norm() <= 1e-12);
+
+        let fl0 = eval_source_expr_complex(&focal_losses[0], &vars).unwrap();
+        let fl1 = eval_source_expr_complex(&focal_losses[1], &vars).unwrap();
+        let fl_avg = eval_source_expr_complex(&focal_mean, &vars).unwrap();
+        assert!((fl_avg - (fl0 + fl1) / Complex64::new(2.0, 0.0)).norm() <= 1e-12);
+    }
+
+    #[test]
     fn symbolic_derivative_matches_finite_difference() {
         let expr = parse_source_expr("exp(x0) * log(x1 + 2)").unwrap();
         let d_dx0 = symbolic_derivative(&expr, 0);
@@ -1516,6 +2138,23 @@ mod tests {
         let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
         let numeric = finite_diff_real(&expr, &vars, 0, 1e-6);
         assert!((analytic - numeric).abs() <= 5e-3);
+    }
+
+    #[test]
+    fn simplify_source_expr_removes_identity_patterns() {
+        let expr = parse_source_expr("((x0 * 1) + 0)^1").unwrap();
+        let simplified = simplify_source_expr(&expr);
+        assert_eq!(simplified, SourceExpr::var(0));
+    }
+
+    #[test]
+    fn symbolic_derivative_simplifies_power_tree_size() {
+        let expr = parse_source_expr("x0^8").unwrap();
+        let deriv = symbolic_derivative(&expr, 0);
+        let vars = [Complex64::new(2.0, 0.0)];
+        let value = eval_source_expr_complex(&deriv, &vars).unwrap();
+        assert!((value.re - 1024.0).abs() <= 1e-9);
+        assert!(source_expr_node_count(&deriv) <= 12, "{deriv:?}");
     }
 
     #[test]
