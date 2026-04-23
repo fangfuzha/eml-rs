@@ -25,3 +25,9 @@
 - [x] 导出 C ABI（`cdylib`）供其他语言调用
 - [x] 提供 `no_std` 评估可行性（若目标包含嵌入式/FPGA 主控）
 - [x] 增加示例应用：符号回归训练环路（EML tree 参数化）
+
+## P5: 训练工程能力增强
+- [x] 增加 SourceExpr 自动微分（symbolic derivative）与梯度对照测试
+- [x] 增加 batch 级 softmax / cross_entropy / mean-CE 模板
+- [x] 增加 de-lowering（EML IR -> source）与语义一致性测试
+- [x] 扩展 benchmark 与 gate（新增 softmax-CE bytecode/tree 比值规则）

@@ -11,6 +11,12 @@
       "lhs": "eml_ln_bytecode_eval",
       "rhs": "eml_ln_tree_eval",
       "max": 1.35
+    },
+    {
+      "name": "softmax_ce_bytecode_vs_tree",
+      "lhs": "softmax_ce_bytecode_eval",
+      "rhs": "softmax_ce_tree_eval",
+      "max": 1.35
     }
   ]
 }

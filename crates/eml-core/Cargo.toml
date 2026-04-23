@@ -1,8 +1,8 @@
 [package]
-name = "eml-lowering"
+name = "eml-core"
 version = "0.1.0"
 edition = "2021"
-description = "Standalone parser/lowering crate for EML expressions."
+description = "no_std core EML primitives and numeric policies."
 license = "MIT"
 
 [dependencies]

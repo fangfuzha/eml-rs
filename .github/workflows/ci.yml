@@ -11,10 +11,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+      - name: Add no_std target
+        run: rustup target add thumbv7em-none-eabihf
+      - name: Check no_std core crate
+        run: cargo check -p eml-core --target thumbv7em-none-eabihf
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Run tests
         run: cargo test --all-targets
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
       - name: Run benchmarks
         run: cargo bench --bench eval_bench
       - name: Benchmark regression gate

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/eml-lowering"]
+members = ["crates/eml-core", "crates/eml-lowering"]
 resolver = "2"
 
 [package]
@@ -13,6 +13,7 @@ license = "MIT"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
+eml-core = { path = "crates/eml-core" }
 eml-lowering = { path = "crates/eml-lowering" }
 num-complex = "0.4"
 

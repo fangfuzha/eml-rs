@@ -68,6 +68,64 @@ pub fn estimate_cost(expr: &SourceExpr) -> CostModel {
                 let (e, l) = walk(x);
                 (e + 10, l + 10)
             }
+            SourceExpr::Tan(x) => {
+                let (e, l) = walk(x);
+                (e + 24, l + 24)
+            }
+            SourceExpr::Sinh(x) | SourceExpr::Cosh(x) => {
+                let (e, l) = walk(x);
+                (e + 9, l + 9)
+            }
+            SourceExpr::Tanh(x) => {
+                let (e, l) = walk(x);
+                (e + 18, l + 18)
+            }
+            SourceExpr::Asin(x) | SourceExpr::Acos(x) | SourceExpr::Atan(x) => {
+                let (e, l) = walk(x);
+                (e + 30, l + 30)
+            }
+            SourceExpr::Sqrt(x) => {
+                let (e, l) = walk(x);
+                (e + 6, l + 6)
+            }
+            SourceExpr::Sigmoid(x) => {
+                let (e, l) = walk(x);
+                (e + 8, l + 8)
+            }
+            SourceExpr::Softplus(x) => {
+                let (e, l) = walk(x);
+                (e + 8, l + 8)
+            }
+            SourceExpr::Swish(x) => {
+                let (e, l) = walk(x);
+                (e + 16, l + 16)
+            }
+            SourceExpr::GeluTanh(x) => {
+                let (e, l) = walk(x);
+                (e + 36, l + 36)
+            }
+            SourceExpr::ReluSoft(x) => {
+                let (e, l) = walk(x);
+                (e + 8, l + 8)
+            }
+            SourceExpr::Elu(x, alpha) => {
+                let (ex, lx) = walk(x);
+                let (ea, la) = walk(alpha);
+                (ex + ea + 20, lx + la + 20)
+            }
+            SourceExpr::LeakyRelu(x, slope) => {
+                let (ex, lx) = walk(x);
+                let (es, ls) = walk(slope);
+                (ex + es + 14, lx + ls + 14)
+            }
+            SourceExpr::Softsign(x) => {
+                let (e, l) = walk(x);
+                (e + 14, l + 14)
+            }
+            SourceExpr::Mish(x) => {
+                let (e, l) = walk(x);
+                (e + 20, l + 20)
+            }
         }
     }
 
@@ -105,6 +163,27 @@ pub fn rewrite_once(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Log(x) => SourceExpr::Log(Box::new(rewrite_once(x))),
         SourceExpr::Sin(x) => SourceExpr::Sin(Box::new(rewrite_once(x))),
         SourceExpr::Cos(x) => SourceExpr::Cos(Box::new(rewrite_once(x))),
+        SourceExpr::Tan(x) => SourceExpr::Tan(Box::new(rewrite_once(x))),
+        SourceExpr::Sinh(x) => SourceExpr::Sinh(Box::new(rewrite_once(x))),
+        SourceExpr::Cosh(x) => SourceExpr::Cosh(Box::new(rewrite_once(x))),
+        SourceExpr::Tanh(x) => SourceExpr::Tanh(Box::new(rewrite_once(x))),
+        SourceExpr::Asin(x) => SourceExpr::Asin(Box::new(rewrite_once(x))),
+        SourceExpr::Acos(x) => SourceExpr::Acos(Box::new(rewrite_once(x))),
+        SourceExpr::Atan(x) => SourceExpr::Atan(Box::new(rewrite_once(x))),
+        SourceExpr::Sqrt(x) => SourceExpr::Sqrt(Box::new(rewrite_once(x))),
+        SourceExpr::Sigmoid(x) => SourceExpr::Sigmoid(Box::new(rewrite_once(x))),
+        SourceExpr::Softplus(x) => SourceExpr::Softplus(Box::new(rewrite_once(x))),
+        SourceExpr::Swish(x) => SourceExpr::Swish(Box::new(rewrite_once(x))),
+        SourceExpr::GeluTanh(x) => SourceExpr::GeluTanh(Box::new(rewrite_once(x))),
+        SourceExpr::ReluSoft(x) => SourceExpr::ReluSoft(Box::new(rewrite_once(x))),
+        SourceExpr::Elu(x, alpha) => {
+            SourceExpr::Elu(Box::new(rewrite_once(x)), Box::new(rewrite_once(alpha)))
+        }
+        SourceExpr::LeakyRelu(x, slope) => {
+            SourceExpr::LeakyRelu(Box::new(rewrite_once(x)), Box::new(rewrite_once(slope)))
+        }
+        SourceExpr::Softsign(x) => SourceExpr::Softsign(Box::new(rewrite_once(x))),
+        SourceExpr::Mish(x) => SourceExpr::Mish(Box::new(rewrite_once(x))),
         leaf => leaf.clone(),
     };
 
@@ -250,6 +329,84 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
             }
             expr.clone()
         }
+        SourceExpr::Tan(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Sinh(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Cosh(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(1);
+            }
+            expr.clone()
+        }
+        SourceExpr::Tanh(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Sigmoid(x) => {
+            if is_zero(x) {
+                return SourceExpr::Rational(1, 2);
+            }
+            expr.clone()
+        }
+        SourceExpr::Softplus(x) => {
+            if is_zero(x) {
+                // ln(2) left symbolic: no exact rational constant replacement.
+                return expr.clone();
+            }
+            expr.clone()
+        }
+        SourceExpr::Swish(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::ReluSoft(x) => {
+            if is_zero(x) {
+                return expr.clone();
+            }
+            expr.clone()
+        }
+        SourceExpr::Elu(x, _) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::LeakyRelu(x, _) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Softsign(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Mish(x) => {
+            if is_zero(x) {
+                return SourceExpr::Int(0);
+            }
+            expr.clone()
+        }
+        SourceExpr::Asin(_)
+        | SourceExpr::Acos(_)
+        | SourceExpr::Atan(_)
+        | SourceExpr::Sqrt(_)
+        | SourceExpr::GeluTanh(_) => expr.clone(),
         _ => expr.clone(),
     }
 }

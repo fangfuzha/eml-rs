@@ -69,6 +69,16 @@ impl Display for EmlError {
 
 impl std::error::Error for EmlError {}
 
+impl From<eml_core::EmlCoreError> for EmlError {
+    fn from(value: eml_core::EmlCoreError) -> Self {
+        match value {
+            eml_core::EmlCoreError::Domain(msg) => EmlError::Domain(msg),
+            eml_core::EmlCoreError::NonFiniteInput(msg) => EmlError::NonFiniteInput(msg),
+            eml_core::EmlCoreError::NonFiniteOutput(msg) => EmlError::NonFiniteOutput(msg),
+        }
+    }
+}
+
 impl From<eml_lowering::LoweringError> for EmlError {
     fn from(value: eml_lowering::LoweringError) -> Self {
         match value {

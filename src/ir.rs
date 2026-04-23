@@ -140,85 +140,66 @@ impl Expr {
 
     /// Computes structural statistics over the expression tree.
     pub fn stats(&self) -> ExprStats {
-        let mut counts = HashMap::<String, usize>::new();
-        let mut var_set = HashSet::<usize>::new();
-        let mut nodes = 0usize;
-        let mut eml_nodes = 0usize;
-        let mut min_required_arity = 0usize;
-
-        fn walk(
-            expr: &Expr,
-            depth: usize,
-            nodes: &mut usize,
-            eml_nodes: &mut usize,
-            var_set: &mut HashSet<usize>,
-            min_required_arity: &mut usize,
-            counts: &mut HashMap<String, usize>,
-            max_depth: &mut usize,
-        ) -> String {
-            *nodes += 1;
-            *max_depth = (*max_depth).max(depth);
-            let key = match expr {
-                Expr::One => "1".to_string(),
-                Expr::Var(index) => {
-                    var_set.insert(*index);
-                    *min_required_arity = (*min_required_arity).max(*index + 1);
-                    format!("v{index}")
-                }
-                Expr::Eml(lhs, rhs) => {
-                    *eml_nodes += 1;
-                    let lk = walk(
-                        lhs,
-                        depth + 1,
-                        nodes,
-                        eml_nodes,
-                        var_set,
-                        min_required_arity,
-                        counts,
-                        max_depth,
-                    );
-                    let rk = walk(
-                        rhs,
-                        depth + 1,
-                        nodes,
-                        eml_nodes,
-                        var_set,
-                        min_required_arity,
-                        counts,
-                        max_depth,
-                    );
-                    format!("e({lk},{rk})")
-                }
-            };
-            *counts.entry(key.clone()).or_insert(0) += 1;
-            key
+        struct StatsCtx {
+            counts: HashMap<String, usize>,
+            var_set: HashSet<usize>,
+            nodes: usize,
+            eml_nodes: usize,
+            min_required_arity: usize,
+            max_depth: usize,
         }
 
-        let mut depth = 0usize;
-        walk(
-            self,
-            1,
-            &mut nodes,
-            &mut eml_nodes,
-            &mut var_set,
-            &mut min_required_arity,
-            &mut counts,
-            &mut depth,
-        );
+        impl StatsCtx {
+            fn new() -> Self {
+                Self {
+                    counts: HashMap::new(),
+                    var_set: HashSet::new(),
+                    nodes: 0,
+                    eml_nodes: 0,
+                    min_required_arity: 0,
+                    max_depth: 0,
+                }
+            }
 
-        let shared_subexpressions = counts
+            fn walk(&mut self, expr: &Expr, depth: usize) -> String {
+                self.nodes += 1;
+                self.max_depth = self.max_depth.max(depth);
+                let key = match expr {
+                    Expr::One => "1".to_string(),
+                    Expr::Var(index) => {
+                        self.var_set.insert(*index);
+                        self.min_required_arity = self.min_required_arity.max(*index + 1);
+                        format!("v{index}")
+                    }
+                    Expr::Eml(lhs, rhs) => {
+                        self.eml_nodes += 1;
+                        let lk = self.walk(lhs, depth + 1);
+                        let rk = self.walk(rhs, depth + 1);
+                        format!("e({lk},{rk})")
+                    }
+                };
+                *self.counts.entry(key.clone()).or_insert(0) += 1;
+                key
+            }
+        }
+
+        let mut ctx = StatsCtx::new();
+        ctx.walk(self, 1);
+
+        let shared_subexpressions = ctx
+            .counts
             .values()
             .filter(|count| **count > 1)
             .map(|count| count - 1)
             .sum();
 
         ExprStats {
-            nodes,
-            depth,
-            eml_nodes,
-            distinct_vars: var_set.len(),
-            min_required_arity,
-            unique_subexpressions: counts.len(),
+            nodes: ctx.nodes,
+            depth: ctx.max_depth,
+            eml_nodes: ctx.eml_nodes,
+            distinct_vars: ctx.var_set.len(),
+            min_required_arity: ctx.min_required_arity,
+            unique_subexpressions: ctx.counts.len(),
             shared_subexpressions,
         }
     }
