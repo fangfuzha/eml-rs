@@ -19,7 +19,7 @@
 ### 兼容性矩阵
 - OS: Linux / Windows / macOS
 - 架构检查: `x86_64` + `aarch64` target check
-- Rust 版本: stable + MSRV `1.75`
+- Rust 版本: stable + MSRV `1.86`
 - `no_std`: `eml-core` on `thumbv7em-none-eabihf`
 
 ### Fuzzing
@@ -55,7 +55,7 @@
 ### Compatibility Matrix
 - OS: Linux / Windows / macOS
 - Architecture checks: `x86_64` + `aarch64` target checks
-- Rust versions: stable + MSRV `1.75`
+- Rust versions: stable + MSRV `1.86`
 - `no_std`: `eml-core` on `thumbv7em-none-eabihf`
 
 ### Fuzzing

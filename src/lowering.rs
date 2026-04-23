@@ -29,7 +29,8 @@ pub use eml_lowering::{LoweredExpr, LoweringError, SourceExpr};
 
 /// Lowers a source expression into standalone EML-only tree (`LoweredExpr`).
 pub fn lower_to_lowered_eml(expr: &SourceExpr) -> Result<LoweredExpr, EmlError> {
-    Ok(eml_lowering::lower_to_eml(expr)?)
+    let simplified = simplify_source_expr(expr);
+    Ok(eml_lowering::lower_to_eml(&simplified)?)
 }
 
 /// Converts a source expression into `eml-rs` IR (`Expr`).
@@ -99,5 +100,24 @@ mod tests {
         let eml_v = expr.eval_complex(&vars).unwrap();
         let src_v = eval_source_expr_complex(&raised, &vars).unwrap();
         assert!((eml_v - src_v).norm() <= 1e-12);
+    }
+
+    #[test]
+    fn lower_to_eml_matches_pre_simplified_source() {
+        let repeated = SourceExpr::Add(
+            Box::new(SourceExpr::Add(
+                Box::new(SourceExpr::var(0)),
+                Box::new(SourceExpr::var(1)),
+            )),
+            Box::new(SourceExpr::Add(
+                Box::new(SourceExpr::var(0)),
+                Box::new(SourceExpr::var(1)),
+            )),
+        );
+        let simplified = simplify_source_expr(&repeated);
+        assert_ne!(simplified, repeated);
+        let direct = lower_to_eml(&repeated).unwrap();
+        let simplified_lowered = lower_to_eml(&simplified).unwrap();
+        assert_eq!(direct, simplified_lowered);
     }
 }

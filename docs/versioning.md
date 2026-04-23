@@ -7,7 +7,7 @@
 - `1.x`: 进入稳定阶段，遵守 SemVer，破坏性改动只能出现在 major 版本。
 
 ### MSRV
-- 当前 MSRV：`Rust 1.75`
+- 当前 MSRV：`Rust 1.86`
 - 规则：MSRV 升级必须写入变更日志和版本文档。
 
 ### 文档版本化
@@ -26,7 +26,7 @@
 - `1.x`: stable phase; SemVer applies and breaking changes move to major releases.
 
 ### MSRV
-- Current MSRV: `Rust 1.75`
+- Current MSRV: `Rust 1.86`
 - Rule: every MSRV bump must be documented in the changelog and versioning docs.
 
 ### Documentation Versioning
