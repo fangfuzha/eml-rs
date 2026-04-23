@@ -19,7 +19,7 @@ eml-lowering = { version = "0.1.0", path = "crates/eml-lowering" }
 num-complex = "0.4"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 libm = "0.2"
 serde_json = "1.0"
 
