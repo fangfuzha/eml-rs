@@ -20,10 +20,6 @@ jobs:
         uses: taiki-e/install-action@cargo-audit
       - name: Run tests
         run: cargo test --all-targets
-      - name: Run benchmarks
-        run: cargo bench --bench eval_bench
-      - name: Benchmark regression gate
-        run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
       - name: Run cargo audit
         run: cargo audit
       - name: Fuzz parser/lowering path
@@ -32,3 +28,18 @@ jobs:
         run: cargo fuzz run expr_eval_consistency -- -max_total_time=60
       - name: Fuzz autodiff/simplify path
         run: cargo fuzz run autodiff_simplify -- -max_total_time=60
+
+  nightly-bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Run benchmarks
+        run: cargo bench --bench eval_bench
+      - name: Benchmark regression gate
+        run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
+      - name: Ensure release build for C ABI path
+        run: cargo build --release -q

@@ -4,8 +4,41 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_required: ${{ steps.filter.outputs.matrix_required }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect matrix-relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            matrix_required:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".github/workflows/**"
+              - "benchmarks/**"
+              - "benches/**"
+              - "crates/**"
+              - "examples/**"
+              - "fuzz/**"
+              - "include/**"
+              - "scripts/**"
+              - "src/**"
+              - "tests/**"
+
   test:
+    needs: changes
+    if: needs.changes.outputs.matrix_required == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +95,8 @@ jobs:
         run: cargo llvm-cov --workspace --all-features --all-targets --summary-only --fail-under-lines 80 --fail-under-regions 70
 
   compat:
+    needs: changes
+    if: needs.changes.outputs.matrix_required == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -99,18 +134,3 @@ jobs:
         run: cargo audit
       - name: Run cargo deny
         run: cargo deny check licenses bans
-
-  bench:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-      - name: Restore Rust cache
-        uses: Swatinem/rust-cache@v2
-      - name: Run benchmarks
-        run: cargo bench --bench eval_bench
-      - name: Benchmark regression gate
-        run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
-      - name: Ensure release build for C ABI path
-        run: cargo build --release -q
