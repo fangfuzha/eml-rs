@@ -107,11 +107,23 @@ impl BytecodeProgram {
         vars: &[Complex64],
         policy: &EvalPolicy,
     ) -> Result<Complex64, EmlError> {
+        let mut regs = self.new_register_file()?;
+        self.eval_complex_with_registers(vars, policy, &mut regs)
+    }
+
+    fn new_register_file(&self) -> Result<Vec<Complex64>, EmlError> {
         if self.register_count == 0 {
             return Err(EmlError::Unsupported("bytecode program has zero registers"));
         }
+        Ok(vec![Complex64::new(0.0, 0.0); self.register_count])
+    }
 
-        let mut regs = vec![Complex64::new(0.0, 0.0); self.register_count];
+    fn eval_complex_with_registers(
+        &self,
+        vars: &[Complex64],
+        policy: &EvalPolicy,
+        regs: &mut [Complex64],
+    ) -> Result<Complex64, EmlError> {
         for inst in &self.instructions {
             match inst {
                 Instruction::LoadOne { dst } => {
@@ -134,20 +146,35 @@ impl BytecodeProgram {
         Ok(regs[self.output])
     }
 
-    /// Executes bytecode over complex inputs with default policy.
-    pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
-        self.eval_complex_with_policy(vars, &EvalPolicy::default())
-    }
-
-    /// Executes bytecode over real inputs with explicit policy.
-    pub fn eval_real_with_policy(
+    fn eval_real_with_registers(
         &self,
         vars: &[f64],
         imag_tolerance: f64,
         policy: &EvalPolicy,
+        regs: &mut [Complex64],
     ) -> Result<f64, EmlError> {
-        let vars_complex: Vec<Complex64> = vars.iter().map(|v| Complex64::new(*v, 0.0)).collect();
-        let out = self.eval_complex_with_policy(&vars_complex, policy)?;
+        for inst in &self.instructions {
+            match inst {
+                Instruction::LoadOne { dst } => {
+                    regs[*dst] = Complex64::new(1.0, 0.0);
+                }
+                Instruction::LoadVar { dst, index } => {
+                    let value = vars.get(*index).copied().ok_or(EmlError::MissingVariable {
+                        index: *index,
+                        arity: vars.len(),
+                    })?;
+                    regs[*dst] = Complex64::new(value, 0.0);
+                }
+                Instruction::LoadConst { dst, value } => {
+                    regs[*dst] = *value;
+                }
+                Instruction::Eml { dst, lhs, rhs } => {
+                    regs[*dst] = eml_complex_with_policy(regs[*lhs], regs[*rhs], policy)?;
+                }
+            }
+        }
+
+        let out = regs[self.output];
         if out.im.abs() > imag_tolerance {
             return Err(EmlError::NonRealOutput {
                 imag: out.im,
@@ -157,9 +184,79 @@ impl BytecodeProgram {
         Ok(out.re)
     }
 
+    /// Executes bytecode over complex inputs with default policy.
+    pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
+        self.eval_complex_with_policy(vars, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over a complex batch while reusing one register file.
+    pub fn eval_complex_batch_with_policy(
+        &self,
+        samples: &[Vec<Complex64>],
+        policy: &EvalPolicy,
+    ) -> Result<Vec<Complex64>, EmlError> {
+        if samples.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut regs = self.new_register_file()?;
+        let mut out = Vec::with_capacity(samples.len());
+        for vars in samples {
+            out.push(self.eval_complex_with_registers(vars, policy, &mut regs)?);
+        }
+        Ok(out)
+    }
+
+    /// Executes bytecode over a complex batch with default policy.
+    pub fn eval_complex_batch(
+        &self,
+        samples: &[Vec<Complex64>],
+    ) -> Result<Vec<Complex64>, EmlError> {
+        self.eval_complex_batch_with_policy(samples, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over real inputs with explicit policy.
+    pub fn eval_real_with_policy(
+        &self,
+        vars: &[f64],
+        imag_tolerance: f64,
+        policy: &EvalPolicy,
+    ) -> Result<f64, EmlError> {
+        let mut regs = self.new_register_file()?;
+        self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)
+    }
+
     /// Executes bytecode over real inputs with default policy.
     pub fn eval_real(&self, vars: &[f64], imag_tolerance: f64) -> Result<f64, EmlError> {
         self.eval_real_with_policy(vars, imag_tolerance, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over a real batch while reusing one register file.
+    pub fn eval_real_batch_with_policy(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+        policy: &EvalPolicy,
+    ) -> Result<Vec<f64>, EmlError> {
+        if samples.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut regs = self.new_register_file()?;
+        let mut out = Vec::with_capacity(samples.len());
+        for vars in samples {
+            out.push(self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)?);
+        }
+        Ok(out)
+    }
+
+    /// Executes bytecode over a real batch with default policy.
+    pub fn eval_real_batch(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+    ) -> Result<Vec<f64>, EmlError> {
+        self.eval_real_batch_with_policy(samples, imag_tolerance, &EvalPolicy::default())
     }
 }
 
@@ -351,5 +448,39 @@ mod tests {
             .instructions
             .iter()
             .any(|inst| matches!(inst, Instruction::LoadConst { .. })));
+    }
+
+    #[test]
+    fn complex_batch_eval_matches_scalar_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![
+            vec![Complex64::new(0.1, 0.0), Complex64::new(0.2, 0.0)],
+            vec![Complex64::new(0.3, 0.0), Complex64::new(0.4, 0.0)],
+            vec![Complex64::new(0.5, 0.0), Complex64::new(0.6, 0.0)],
+        ];
+
+        let scalar: Vec<_> = samples
+            .iter()
+            .map(|vars| prog.eval_complex(vars).unwrap())
+            .collect();
+        let batch = prog.eval_complex_batch(&samples).unwrap();
+
+        assert_eq!(batch, scalar);
+    }
+
+    #[test]
+    fn real_batch_eval_matches_scalar_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![vec![0.1, 0.2], vec![0.3, 0.4], vec![0.5, 0.6]];
+
+        let scalar: Vec<_> = samples
+            .iter()
+            .map(|vars| prog.eval_real(vars, 1e-12).unwrap())
+            .collect();
+        let batch = prog.eval_real_batch(&samples, 1e-12).unwrap();
+
+        assert_eq!(batch, scalar);
     }
 }

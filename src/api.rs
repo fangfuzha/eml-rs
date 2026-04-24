@@ -176,10 +176,21 @@ impl CompiledPipeline {
         backend: BuiltinBackend,
         samples: &[Vec<Complex64>],
     ) -> EmlResult<Vec<Complex64>> {
-        samples
-            .iter()
-            .map(|vars| self.eval_complex(backend, vars))
-            .collect()
+        match backend {
+            BuiltinBackend::Tree => samples
+                .iter()
+                .map(|vars| self.expr.eval_complex_with_policy(vars, &self.eval_policy))
+                .collect(),
+            BuiltinBackend::Rpn => samples
+                .iter()
+                .map(|vars| eval_rpn_complex_with_policy(&self.rpn, vars, &self.eval_policy))
+                .collect(),
+            BuiltinBackend::Bytecode => self
+                .bytecode
+                .as_ref()
+                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
+                .eval_complex_batch_with_policy(samples, &self.eval_policy),
+        }
     }
 
     /// Evaluates a batch of real samples via one builtin backend.
@@ -188,10 +199,31 @@ impl CompiledPipeline {
         backend: BuiltinBackend,
         samples: &[Vec<f64>],
     ) -> EmlResult<Vec<f64>> {
-        samples
-            .iter()
-            .map(|vars| self.eval_real(backend, vars))
-            .collect()
+        match backend {
+            BuiltinBackend::Tree => samples
+                .iter()
+                .map(|vars| {
+                    self.expr
+                        .eval_real_with_policy(vars, self.imag_tolerance, &self.eval_policy)
+                })
+                .collect(),
+            BuiltinBackend::Rpn => samples
+                .iter()
+                .map(|vars| {
+                    eval_rpn_real_with_policy(
+                        &self.rpn,
+                        vars,
+                        self.imag_tolerance,
+                        &self.eval_policy,
+                    )
+                })
+                .collect(),
+            BuiltinBackend::Bytecode => self
+                .bytecode
+                .as_ref()
+                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
+                .eval_real_batch_with_policy(samples, self.imag_tolerance, &self.eval_policy),
+        }
     }
 
     /// Evaluates complex samples in parallel across independent chunks.

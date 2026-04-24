@@ -57,9 +57,7 @@ fn bench_eml_ln_bytecode(c: &mut Criterion) {
 
     c.bench_function("eml_ln_bytecode_eval", |b| {
         b.iter(|| {
-            for vars in &samples {
-                black_box(prog.eval_complex(black_box(vars)).unwrap());
-            }
+            black_box(prog.eval_complex_batch(black_box(&samples)).unwrap());
         })
     });
 }
@@ -92,9 +90,7 @@ fn bench_shared_bytecode(c: &mut Criterion) {
 
     c.bench_function("shared_eml_bytecode_eval", |b| {
         b.iter(|| {
-            for vars in &samples {
-                black_box(prog.eval_complex(black_box(vars)).unwrap());
-            }
+            black_box(prog.eval_complex_batch(black_box(&samples)).unwrap());
         })
     });
 }
@@ -156,9 +152,7 @@ fn bench_softmax_ce_bytecode_batch(c: &mut Criterion, batch_size: usize) {
 
     c.bench_function(&name, |b| {
         b.iter(|| {
-            for vars in &samples {
-                black_box(prog.eval_complex(black_box(vars)).unwrap());
-            }
+            black_box(prog.eval_complex_batch(black_box(&samples)).unwrap());
         })
     });
 }
