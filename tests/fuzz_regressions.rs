@@ -1,9 +1,6 @@
-#![no_main]
-
 use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::core::EvalPolicy;
 use eml_rs::ir::{eval_rpn_complex_with_policy, Expr};
-use libfuzzer_sys::fuzz_target;
 use num_complex::Complex64;
 
 fn same_or_close(lhs: Complex64, rhs: Complex64, tol: f64) -> bool {
@@ -50,26 +47,30 @@ fn decode_expr(data: &[u8], index: &mut usize, depth: usize) -> Expr {
     }
 }
 
-fuzz_target!(|data: &[u8]| {
+#[test]
+fn fuzz_expr_eval_consistency_regression_case() {
     let mut index = 0usize;
-    let expr = decode_expr(data, &mut index, 0);
+    let expr = decode_expr(&[182, 212, 182, 245], &mut index, 0);
     let rpn = expr.to_rpn_vec();
-    let prog = match BytecodeProgram::from_expr_with_policy(&expr, &EvalPolicy::relaxed()) {
-        Ok(v) => v,
-        Err(_) => return,
-    };
+    let policy = EvalPolicy::relaxed();
+    let prog = BytecodeProgram::from_expr_with_policy(&expr, &policy).unwrap();
     let vars = [
         Complex64::new(0.2, 0.0),
         Complex64::new(0.5, 0.1),
         Complex64::new(1.2, -0.3),
         Complex64::new(2.0, 0.0),
     ];
-    let tree = expr.eval_complex_with_policy(&vars, &EvalPolicy::relaxed()).ok();
-    let rpn_v = eval_rpn_complex_with_policy(&rpn, &vars, &EvalPolicy::relaxed()).ok();
-    let bytecode = prog.eval_complex_with_policy(&vars, &EvalPolicy::relaxed()).ok();
 
-    if let (Some(tree), Some(rpn_v), Some(bytecode)) = (tree, rpn_v, bytecode) {
-        assert!(same_or_close(tree, rpn_v, 1e-8));
-        assert!(same_or_close(tree, bytecode, 1e-8));
-    }
-});
+    let tree = expr.eval_complex_with_policy(&vars, &policy).unwrap();
+    let rpn_v = eval_rpn_complex_with_policy(&rpn, &vars, &policy).unwrap();
+    let bytecode = prog.eval_complex_with_policy(&vars, &policy).unwrap();
+
+    assert!(
+        same_or_close(tree, rpn_v, 1e-8),
+        "expr={expr:?}, tree={tree:?}, rpn={rpn_v:?}, bytecode={bytecode:?}"
+    );
+    assert!(
+        same_or_close(tree, bytecode, 1e-8),
+        "expr={expr:?}, tree={tree:?}, rpn={rpn_v:?}, bytecode={bytecode:?}"
+    );
+}
