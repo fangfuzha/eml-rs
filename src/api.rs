@@ -4,6 +4,8 @@
 //! provides a narrower API for "parse -> optimize -> lower -> compile ->
 //! evaluate/verify" workflows.
 
+use std::time::Instant;
+
 use num_complex::Complex64;
 
 use crate::bytecode::BytecodeProgram;
@@ -16,6 +18,7 @@ use crate::opt::optimize_for_lowering;
 use crate::plugin::{
     ExecutionBackend, ExprPass, PipelineEvent, PipelineObserver, PipelineStage, SourcePass,
 };
+use crate::profiling::{CompileMetrics, EvalMetrics, ProfiledPipeline};
 use crate::verify::{
     verify_against_complex_ref_with_policy, verify_against_real_ref_with_policy, VerificationReport,
 };
@@ -155,6 +158,54 @@ impl CompiledPipeline {
         }
     }
 
+    /// Measures builtin complex evaluation over a batch of samples.
+    pub fn profile_eval_complex_batch(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<Complex64>],
+    ) -> EmlResult<EvalMetrics> {
+        let started = Instant::now();
+        for vars in samples {
+            let _ = self.eval_complex(backend, vars)?;
+        }
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        Ok(EvalMetrics {
+            backend,
+            samples: samples.len(),
+            total,
+            per_sample,
+        })
+    }
+
+    /// Measures builtin real-valued evaluation over a batch of samples.
+    pub fn profile_eval_real_batch(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<f64>],
+    ) -> EmlResult<EvalMetrics> {
+        let started = Instant::now();
+        for vars in samples {
+            let _ = self.eval_real(backend, vars)?;
+        }
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        Ok(EvalMetrics {
+            backend,
+            samples: samples.len(),
+            total,
+            per_sample,
+        })
+    }
+
     /// Evaluates through a user-provided experimental backend.
     pub fn eval_complex_with_backend(
         &self,
@@ -239,24 +290,47 @@ impl PipelineBuilder {
 
     /// Parses and compiles an infix source string.
     pub fn compile_str(self, input: &str) -> EmlResult<CompiledPipeline> {
+        Ok(self.compile_str_profiled(input)?.pipeline)
+    }
+
+    /// Parses and compiles an infix source string while collecting stage timings.
+    pub fn compile_str_profiled(
+        self,
+        input: &str,
+    ) -> EmlResult<ProfiledPipeline<CompiledPipeline>> {
+        let total_started = Instant::now();
+        let parse_started = Instant::now();
         let source = parse_source_expr(input)?;
-        self.compile_source(source)
+        let mut profiled = self.compile_source_profiled(source)?;
+        profiled.metrics.parse = parse_started.elapsed();
+        profiled.metrics.total = total_started.elapsed();
+        Ok(profiled)
     }
 
     /// Compiles a prebuilt source expression.
     pub fn compile_source(self, source: SourceExpr) -> EmlResult<CompiledPipeline> {
+        Ok(self.compile_source_profiled(source)?.pipeline)
+    }
+
+    /// Compiles a prebuilt source expression while collecting stage timings.
+    pub fn compile_source_profiled(
+        self,
+        source: SourceExpr,
+    ) -> EmlResult<ProfiledPipeline<CompiledPipeline>> {
         let PipelineBuilder {
             options,
             source_passes,
             expr_passes,
             observers,
         } = self;
+        let total_started = Instant::now();
 
         emit(
             &observers,
             PipelineEvent::from_source(PipelineStage::Parsed, None, &source),
         );
 
+        let simplify_started = Instant::now();
         let mut optimized_source = if options.optimize_source {
             optimize_for_lowering(&source)
         } else {
@@ -278,13 +352,17 @@ impl PipelineBuilder {
                 ),
             );
         }
+        let simplify_duration = simplify_started.elapsed();
 
+        let lowering_started = Instant::now();
         let mut expr = lower_to_eml(&optimized_source)?;
         emit(
             &observers,
             PipelineEvent::from_expr(PipelineStage::Lowered, None, &expr),
         );
+        let lowering_duration = lowering_started.elapsed();
 
+        let expr_pass_started = Instant::now();
         for pass in &expr_passes {
             expr = pass.run(&expr)?;
             emit(
@@ -296,16 +374,24 @@ impl PipelineBuilder {
                 ),
             );
         }
+        let expr_pass_duration = expr_pass_started.elapsed();
 
+        let rpn_started = Instant::now();
         let rpn = expr.to_rpn_vec();
+        let rpn_duration = rpn_started.elapsed();
+        let expr_stats = expr.stats();
+        let input_source_nodes = source_expr_node_count(&source);
+        let optimized_source_nodes = source_expr_node_count(&optimized_source);
+
+        let bytecode_started = Instant::now();
         let bytecode = if options.compile_bytecode {
             let prog = BytecodeProgram::from_expr_with_policy(&expr, &options.eval_policy)?;
             let event = PipelineEvent {
                 stage: PipelineStage::BytecodeCompiled,
                 label: None,
                 source_nodes: None,
-                expr_nodes: Some(expr.stats().nodes),
-                expr_depth: Some(expr.stats().depth),
+                expr_nodes: Some(expr_stats.nodes),
+                expr_depth: Some(expr_stats.depth),
                 bytecode_instructions: Some(prog.instructions.len()),
             };
             emit(&observers, event);
@@ -313,17 +399,21 @@ impl PipelineBuilder {
         } else {
             None
         };
+        let bytecode_duration = if options.compile_bytecode {
+            Some(bytecode_started.elapsed())
+        } else {
+            None
+        };
 
-        let expr_stats = expr.stats();
         let report = PipelineReport {
-            input_source_nodes: source_expr_node_count(&source),
-            optimized_source_nodes: source_expr_node_count(&optimized_source),
+            input_source_nodes,
+            optimized_source_nodes,
             expr_stats: expr_stats.clone(),
             bytecode_instructions: bytecode.as_ref().map(|prog| prog.instructions.len()),
             used_builtin_optimization: options.optimize_source,
         };
 
-        Ok(CompiledPipeline {
+        let pipeline = CompiledPipeline {
             source,
             optimized_source,
             expr,
@@ -332,7 +422,25 @@ impl PipelineBuilder {
             report,
             eval_policy: options.eval_policy,
             imag_tolerance: options.imag_tolerance,
-        })
+        };
+
+        let metrics = CompileMetrics {
+            simplify: simplify_duration,
+            lowering: lowering_duration,
+            expr_pass: expr_pass_duration,
+            rpn_build: rpn_duration,
+            bytecode_build: bytecode_duration,
+            total: total_started.elapsed(),
+            input_source_nodes: pipeline.report.input_source_nodes,
+            optimized_source_nodes: pipeline.report.optimized_source_nodes,
+            expr_nodes: pipeline.report.expr_stats.nodes,
+            expr_depth: pipeline.report.expr_stats.depth,
+            expr_unique_subexpressions: pipeline.report.expr_stats.unique_subexpressions,
+            bytecode_instructions: pipeline.report.bytecode_instructions,
+            ..CompileMetrics::default()
+        };
+
+        Ok(ProfiledPipeline { pipeline, metrics })
     }
 }
 

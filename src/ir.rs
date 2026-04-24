@@ -204,15 +204,6 @@ impl Expr {
         }
     }
 
-    /// Produces a deterministic fingerprint used by optimizers/CSE.
-    pub(crate) fn fingerprint(&self) -> String {
-        match self {
-            Expr::One => "1".to_string(),
-            Expr::Var(index) => format!("v{index}"),
-            Expr::Eml(lhs, rhs) => format!("e({},{})", lhs.fingerprint(), rhs.fingerprint()),
-        }
-    }
-
     fn to_rpn(&self, out: &mut Vec<Token>) {
         match self {
             Expr::One => out.push(Token::One),

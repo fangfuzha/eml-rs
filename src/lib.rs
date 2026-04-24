@@ -10,6 +10,7 @@
 //! - [`lowering`]: compatibility wrapper for the standalone parser/lowering crate.
 //! - [`opt`]: rewrite rules and cost model utilities.
 //! - [`plugin`]: extension points for research-time passes/backends/observers.
+//! - [`profiling`]: compile/evaluate timing helpers for research profiling.
 //! - [`verify`]: numeric cross-check helpers.
 //! - [`ffi`]: C ABI exports for embedding.
 
@@ -22,6 +23,7 @@ pub mod ir;
 pub mod lowering;
 pub mod opt;
 pub mod plugin;
+pub mod profiling;
 pub mod verify;
 
 pub use error::{EmlDiagnostic, EmlError, EmlErrorCode, EmlResult};
