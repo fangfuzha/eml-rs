@@ -1,6 +1,9 @@
 use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::core::EvalPolicy;
 use eml_rs::ir::{eval_rpn_complex_with_policy, Expr};
+use eml_rs::lowering::{
+    eval_source_expr_complex, parse_source_expr, simplify_source_expr, symbolic_derivative,
+};
 use num_complex::Complex64;
 use std::fs;
 use std::path::PathBuf;
@@ -97,4 +100,48 @@ fn expr_eval_consistency_corpus_contains_non_finite_regression() {
     let path = corpus_file("expr_eval_consistency", "matching_non_finite_backends");
     let bytes = fs::read(path).unwrap();
     assert_eq!(bytes, [182, 212, 182, 245]);
+}
+
+#[test]
+fn autodiff_simplify_corpus_contains_regression_seeds() {
+    let expected = [
+        ("power_compaction", "x0^8"),
+        ("transcendental_product", "exp(x0) * log(x1 + 2)"),
+        ("activation_mix", "softplus(x0) + mish(x0)"),
+        (
+            "branchy_activation_mix",
+            "mish(x0) + elu(x0,0.5) + leaky_relu(x0,0.1)",
+        ),
+    ];
+
+    for (name, source) in expected {
+        let path = corpus_file("autodiff_simplify", name);
+        let bytes = fs::read(path).unwrap();
+        assert_eq!(bytes, source.as_bytes(), "seed {name} drifted");
+    }
+}
+
+#[test]
+fn autodiff_simplify_corpus_examples_parse_and_evaluate() {
+    let vars = [
+        Complex64::new(0.2, 0.0),
+        Complex64::new(0.5, 0.1),
+        Complex64::new(1.2, -0.3),
+        Complex64::new(2.0, 0.0),
+    ];
+
+    for name in [
+        "power_compaction",
+        "transcendental_product",
+        "activation_mix",
+        "branchy_activation_mix",
+    ] {
+        let path = corpus_file("autodiff_simplify", name);
+        let input = fs::read_to_string(path).unwrap();
+        let source = parse_source_expr(&input).unwrap();
+        let deriv = symbolic_derivative(&source, 0);
+        let simplified = simplify_source_expr(&deriv);
+        let _ = eval_source_expr_complex(&deriv, &vars);
+        let _ = eval_source_expr_complex(&simplified, &vars);
+    }
 }

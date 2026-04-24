@@ -5,3 +5,5 @@
 !/fuzz/corpus/parse_lower_eval/**
 !/fuzz/corpus/expr_eval_consistency/
 !/fuzz/corpus/expr_eval_consistency/**
+!/fuzz/corpus/autodiff_simplify/
+!/fuzz/corpus/autodiff_simplify/**

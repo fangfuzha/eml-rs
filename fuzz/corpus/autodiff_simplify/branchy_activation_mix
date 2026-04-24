@@ -1,0 +1,1 @@
+mish(x0) + elu(x0,0.5) + leaky_relu(x0,0.1)
