@@ -162,8 +162,12 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
-      - name: Check workspace on target
+      - name: Check workspace on host target
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cargo check --workspace --all-targets --target ${{ matrix.target }}
+      - name: Check portable targets
+        if: matrix.target != 'x86_64-unknown-linux-gnu'
+        run: cargo check --workspace --lib --bins --examples --target ${{ matrix.target }}
 
   supply-chain:
     needs: changes
