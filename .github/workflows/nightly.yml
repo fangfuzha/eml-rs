@@ -13,6 +13,7 @@ on:
         options:
           - all
           - bench-only
+          - quality-only
 
 concurrency:
   group: nightly-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || github.ref }}
@@ -20,7 +21,7 @@ concurrency:
 
 jobs:
   nightly-quality:
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target == 'all'
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target != 'bench-only'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,7 +30,9 @@ jobs:
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
       - name: Install cargo-fuzz
-        uses: taiki-e/install-action@cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
       - name: Install cargo-audit
         uses: taiki-e/install-action@cargo-audit
       - name: Run tests
@@ -44,6 +47,7 @@ jobs:
         run: cargo fuzz run autodiff_simplify -- -max_total_time=60
 
   nightly-bench:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target != 'quality-only'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

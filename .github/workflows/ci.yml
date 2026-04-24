@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix_required: ${{ steps.filter.outputs.matrix_required }}
+      lint_required: ${{ steps.filter.outputs.lint_required }}
+      no_std_required: ${{ steps.filter.outputs.no_std_required }}
       coverage_required: ${{ steps.filter.outputs.coverage_required }}
       supply_chain_required: ${{ steps.filter.outputs.supply_chain_required }}
     steps:
@@ -37,6 +39,24 @@ jobs:
               - "scripts/**"
               - "src/**"
               - "tests/**"
+            lint_required:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".github/workflows/**"
+              - "benches/**"
+              - "crates/**"
+              - "examples/**"
+              - "fuzz/**"
+              - "include/**"
+              - "scripts/**"
+              - "src/**"
+              - "tests/**"
+            no_std_required:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".cargo/**"
+              - ".github/workflows/**"
+              - "crates/eml-core/**"
             coverage_required:
               - "Cargo.toml"
               - "Cargo.lock"
@@ -77,6 +97,8 @@ jobs:
         run: cargo test --all-targets
 
   lint:
+    needs: changes
+    if: needs.changes.outputs.lint_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -90,6 +112,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
 
   no_std:
+    needs: changes
+    if: needs.changes.outputs.no_std_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
