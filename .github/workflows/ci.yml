@@ -165,9 +165,9 @@ jobs:
       - name: Check workspace on host target
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cargo check --workspace --all-targets --target ${{ matrix.target }}
-      - name: Check portable targets
+      - name: Check portable production targets
         if: matrix.target != 'x86_64-unknown-linux-gnu'
-        run: cargo check --workspace --lib --bins --examples --target ${{ matrix.target }}
+        run: cargo check --workspace --target ${{ matrix.target }}
 
   supply-chain:
     needs: changes
