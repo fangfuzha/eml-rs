@@ -40,11 +40,11 @@ jobs:
       - name: Run cargo audit
         run: cargo audit
       - name: Fuzz parser/lowering path
-        run: cargo fuzz run parse_lower_eval -- -max_total_time=60
+        run: cargo fuzz run parse_lower_eval --target x86_64-unknown-linux-gnu -- -max_total_time=60
       - name: Fuzz backend consistency
-        run: cargo fuzz run expr_eval_consistency -- -max_total_time=60
+        run: cargo fuzz run expr_eval_consistency --target x86_64-unknown-linux-gnu -- -max_total_time=60
       - name: Fuzz autodiff/simplify path
-        run: cargo fuzz run autodiff_simplify -- -max_total_time=60
+        run: cargo fuzz run autodiff_simplify --target x86_64-unknown-linux-gnu -- -max_total_time=60
 
   nightly-bench:
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.target != 'quality-only'
