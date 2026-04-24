@@ -11,6 +11,24 @@ use eml_rs::opt::{estimate_cost, optimize_for_lowering};
 use eml_rs::verify::{verify_against_complex_ref, verify_against_real_ref};
 use num_complex::Complex64;
 
+fn relaxed_values_match(lhs: Complex64, rhs: Complex64, tol: f64) -> bool {
+    if lhs.re.is_finite() && lhs.im.is_finite() && rhs.re.is_finite() && rhs.im.is_finite() {
+        return (lhs - rhs).norm() <= tol;
+    }
+
+    fn scalar_eq(lhs: f64, rhs: f64, tol: f64) -> bool {
+        if lhs.is_nan() || rhs.is_nan() {
+            return lhs.is_nan() && rhs.is_nan();
+        }
+        if lhs.is_infinite() || rhs.is_infinite() {
+            return lhs == rhs;
+        }
+        (lhs - rhs).abs() <= tol
+    }
+
+    scalar_eq(lhs.re, rhs.re, tol) && scalar_eq(lhs.im, rhs.im, tol)
+}
+
 fn finite_diff_real(
     expr: &eml_rs::lowering::SourceExpr,
     vars: &[Complex64],
@@ -87,7 +105,29 @@ fn bytecode_and_tree_evaluation_agree() {
     let relaxed = EvalPolicy::relaxed();
     let tree = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
     let bytecode = prog.eval_complex_with_policy(&vars, &relaxed).unwrap();
-    assert!((tree - bytecode).norm() <= 1e-8);
+    assert!(relaxed_values_match(tree, bytecode, 1e-8));
+}
+
+#[test]
+fn relaxed_backend_comparison_accepts_matching_non_finite_outputs() {
+    let expr = Expr::eml(
+        Expr::eml(
+            Expr::eml(Expr::eml(Expr::one(), Expr::one()), Expr::one()),
+            Expr::one(),
+        ),
+        Expr::one(),
+    );
+    let relaxed = EvalPolicy::relaxed();
+    let prog = BytecodeProgram::from_expr_with_policy(&expr, &relaxed).unwrap();
+    let vars = vec![
+        Complex64::new(0.2, 0.0),
+        Complex64::new(0.5, 0.1),
+        Complex64::new(1.2, -0.3),
+        Complex64::new(2.0, 0.0),
+    ];
+    let tree = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    let bytecode = prog.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    assert!(relaxed_values_match(tree, bytecode, 1e-8));
 }
 
 #[test]
@@ -101,7 +141,7 @@ fn source_lowering_matches_native_reference() {
     let ref_v = eval_source_expr_complex(&optimized, &vars).unwrap();
     let relaxed = EvalPolicy::relaxed();
     let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
-    assert!((ref_v - eml_v).norm() <= 1e-7);
+    assert!(relaxed_values_match(ref_v, eml_v, 1e-7));
 }
 
 #[test]
@@ -126,7 +166,7 @@ fn extended_elementary_functions_match_reference() {
     let relaxed = EvalPolicy::relaxed();
     let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
     assert!(
-        (ref_v - eml_v).norm() <= 2e-6,
+        relaxed_values_match(ref_v, eml_v, 2e-6),
         "ref={ref_v:?}, eml={eml_v:?}"
     );
 }
@@ -141,7 +181,7 @@ fn ai_training_function_family_is_lowerable_and_evaluable() {
     let relaxed = EvalPolicy::relaxed();
     let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
     assert!(
-        (ref_v - eml_v).norm() <= 2e-5,
+        relaxed_values_match(ref_v, eml_v, 2e-5),
         "ref={ref_v:?}, eml={eml_v:?}"
     );
 }
@@ -156,7 +196,7 @@ fn added_activation_family_is_lowerable_and_evaluable() {
     let relaxed = EvalPolicy::relaxed();
     let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
     assert!(
-        (ref_v - eml_v).norm() <= 2e-5,
+        relaxed_values_match(ref_v, eml_v, 2e-5),
         "ref={ref_v:?}, eml={eml_v:?}"
     );
 }
@@ -180,7 +220,7 @@ fn softmax_cross_entropy_vector_templates_are_lowerable() {
     let ce_ref = eval_source_expr_complex(&ce, &vars).unwrap();
     let relaxed = EvalPolicy::relaxed();
     let ce_eval = ce_eml.eval_complex_with_policy(&vars, &relaxed).unwrap();
-    assert!((ce_ref - ce_eval).norm() <= 5e-6);
+    assert!(relaxed_values_match(ce_ref, ce_eval, 5e-6));
 }
 
 #[test]
@@ -223,7 +263,7 @@ fn batch_cross_entropy_mean_template_is_lowerable() {
     let eval_v = mean_ce_eml
         .eval_complex_with_policy(&vars, &relaxed)
         .unwrap();
-    assert!((ref_v - eval_v).norm() <= 1e-5);
+    assert!(relaxed_values_match(ref_v, eval_v, 1e-5));
 }
 
 #[test]
@@ -284,11 +324,11 @@ fn batch_label_smoothing_and_focal_templates_are_lowerable() {
 
     let ls_ref = eval_source_expr_complex(&ls_mean, &vars).unwrap();
     let ls_eval = ls_eml.eval_complex_with_policy(&vars, &relaxed).unwrap();
-    assert!((ls_ref - ls_eval).norm() <= 2e-5);
+    assert!(relaxed_values_match(ls_ref, ls_eval, 2e-5));
 
     let fl_ref = eval_source_expr_complex(&fl_mean, &vars).unwrap();
     let fl_eval = fl_eml.eval_complex_with_policy(&vars, &relaxed).unwrap();
-    assert!((fl_ref - fl_eval).norm() <= 2e-5);
+    assert!(relaxed_values_match(fl_ref, fl_eval, 2e-5));
 }
 
 #[test]

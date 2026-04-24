@@ -2,6 +2,8 @@ use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::core::EvalPolicy;
 use eml_rs::ir::{eval_rpn_complex_with_policy, Expr};
 use num_complex::Complex64;
+use std::fs;
+use std::path::PathBuf;
 
 fn same_or_close(lhs: Complex64, rhs: Complex64, tol: f64) -> bool {
     if lhs.re.is_finite() && lhs.im.is_finite() && rhs.re.is_finite() && rhs.im.is_finite() {
@@ -19,6 +21,14 @@ fn same_or_close(lhs: Complex64, rhs: Complex64, tol: f64) -> bool {
     }
 
     scalar_eq(lhs.re, rhs.re, tol) && scalar_eq(lhs.im, rhs.im, tol)
+}
+
+fn corpus_file(target: &str, name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("fuzz")
+        .join("corpus")
+        .join(target)
+        .join(name)
 }
 
 fn decode_expr(data: &[u8], index: &mut usize, depth: usize) -> Expr {
@@ -73,4 +83,18 @@ fn fuzz_expr_eval_consistency_regression_case() {
         same_or_close(tree, bytecode, 1e-8),
         "expr={expr:?}, tree={tree:?}, rpn={rpn_v:?}, bytecode={bytecode:?}"
     );
+}
+
+#[test]
+fn parse_lower_eval_corpus_contains_large_integer_regression() {
+    let path = corpus_file("parse_lower_eval", "large_integer_literal");
+    let bytes = fs::read(path).unwrap();
+    assert_eq!(bytes, b"515111");
+}
+
+#[test]
+fn expr_eval_consistency_corpus_contains_non_finite_regression() {
+    let path = corpus_file("expr_eval_consistency", "matching_non_finite_backends");
+    let bytes = fs::read(path).unwrap();
+    assert_eq!(bytes, [182, 212, 182, 245]);
 }

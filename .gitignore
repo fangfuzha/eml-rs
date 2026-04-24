@@ -1,3 +1,7 @@
 /target
 /fuzz/artifacts
-/fuzz/corpus
+/fuzz/corpus/*
+!/fuzz/corpus/parse_lower_eval/
+!/fuzz/corpus/parse_lower_eval/**
+!/fuzz/corpus/expr_eval_consistency/
+!/fuzz/corpus/expr_eval_consistency/**
