@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix_required: ${{ steps.filter.outputs.matrix_required }}
+      coverage_required: ${{ steps.filter.outputs.coverage_required }}
+      supply_chain_required: ${{ steps.filter.outputs.supply_chain_required }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,6 +37,25 @@ jobs:
               - "scripts/**"
               - "src/**"
               - "tests/**"
+            coverage_required:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".github/workflows/**"
+              - "benchmarks/**"
+              - "benches/**"
+              - "crates/**"
+              - "examples/**"
+              - "include/**"
+              - "scripts/**"
+              - "src/**"
+              - "tests/**"
+            supply_chain_required:
+              - "Cargo.lock"
+              - "Cargo.toml"
+              - "**/Cargo.toml"
+              - ".cargo/**"
+              - ".github/workflows/**"
+              - "deny.toml"
 
   test:
     needs: changes
@@ -82,6 +103,8 @@ jobs:
         run: cargo check -p eml-core --target thumbv7em-none-eabihf
 
   coverage:
+    needs: changes
+    if: needs.changes.outputs.coverage_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -119,6 +142,8 @@ jobs:
         run: cargo check --workspace --all-targets --target ${{ matrix.target }}
 
   supply-chain:
+    needs: changes
+    if: needs.changes.outputs.supply_chain_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

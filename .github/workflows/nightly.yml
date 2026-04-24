@@ -4,9 +4,23 @@ on:
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
+    inputs:
+      target:
+        description: Which nightly workload to run
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - bench-only
+
+concurrency:
+  group: nightly-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   nightly-quality:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target == 'all'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
