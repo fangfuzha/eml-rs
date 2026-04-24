@@ -5,12 +5,25 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-release:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            asset_suffix: ubuntu-latest
+          - os: windows-latest
+            asset_suffix: windows-latest
+          - os: macos-latest
+            asset_suffix: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -22,11 +35,69 @@ jobs:
         run: cargo test --all-targets
       - name: Build release artifacts
         run: cargo build --release
-      - name: Upload release artifacts
+      - name: Package release assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $dist = Join-Path $PWD "dist"
+          $stage = Join-Path $env:RUNNER_TEMP "eml-rs-release"
+          if (Test-Path $dist) {
+            Remove-Item -LiteralPath $dist -Recurse -Force
+          }
+          if (Test-Path $stage) {
+            Remove-Item -LiteralPath $stage -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Force -Path (Join-Path $stage "include") | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $stage "target/release") | Out-Null
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          Copy-Item -LiteralPath "include/eml_rs.h" -Destination (Join-Path $stage "include/eml_rs.h")
+          Get-ChildItem -Path "target/release" -File |
+            Where-Object { $_.Name -like "*eml_rs*" } |
+            Copy-Item -Destination (Join-Path $stage "target/release")
+
+          $examples = Join-Path $PWD "target/release/examples"
+          if (Test-Path $examples) {
+            Copy-Item -LiteralPath $examples -Destination (Join-Path $stage "target/release/examples") -Recurse
+          }
+
+          Compress-Archive -Path (Join-Path $stage "*") -DestinationPath (Join-Path $dist "eml-rs-${{ github.ref_name }}-${{ matrix.asset_suffix }}.zip") -Force
+      - name: Upload packaged assets
         uses: actions/upload-artifact@v7
         with:
-          name: eml-rs-${{ matrix.os }}
-          path: |
-            include/eml_rs.h
-            target/release/*eml_rs*
-            target/release/examples/*
+          name: release-assets-${{ matrix.asset_suffix }}
+          path: dist/eml-rs-${{ github.ref_name }}-${{ matrix.asset_suffix }}.zip
+          if-no-files-found: error
+
+  publish-release:
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download packaged assets
+        uses: actions/download-artifact@v7
+        with:
+          pattern: release-assets-*
+          path: dist
+          merge-multiple: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          notes="docs/releases/${TAG_NAME}/release-notes.md"
+          if [ ! -f "$notes" ]; then
+            echo "Missing release notes file: $notes" >&2
+            exit 1
+          fi
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" --title "eml-rs ${TAG_NAME}" --notes-file "$notes"
+            gh release upload "$TAG_NAME" dist/*.zip --clobber
+          else
+            gh release create "$TAG_NAME" dist/*.zip --title "eml-rs ${TAG_NAME}" --notes-file "$notes" --verify-tag
+          fi

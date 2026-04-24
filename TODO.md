@@ -128,6 +128,7 @@
 - [x] 下载 release workflow artifacts，并压缩为 GitHub Release assets
 - [x] 创建 GitHub Release `v0.1.1`，使用 `docs/releases/v0.1.1/release-notes.md` 作为说明
 - [x] 验证 release 页面、tag、assets、CI 状态可访问
+- [x] 修正 `release.yml`，后续 tag push 自动创建 GitHub Release 并上传 assets
 
 ## P13: 指标自动化补齐
 - [ ] 新增内存 RSS 采集脚本，覆盖 `1M nodes <= 1.0GB` 的人工验收项
