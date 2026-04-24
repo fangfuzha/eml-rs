@@ -4,6 +4,7 @@
 //! provides a narrower API for "parse -> optimize -> lower -> compile ->
 //! evaluate/verify" workflows.
 
+use std::thread;
 use std::time::Instant;
 
 use num_complex::Complex64;
@@ -18,9 +19,11 @@ use crate::opt::optimize_for_lowering;
 use crate::plugin::{
     ExecutionBackend, ExprPass, PipelineEvent, PipelineObserver, PipelineStage, SourcePass,
 };
-use crate::profiling::{CompileMetrics, EvalMetrics, ProfiledPipeline};
+use crate::profiling::{CompileMetrics, EvalMetrics, ProfiledPipeline, VerifyMetrics};
 use crate::verify::{
-    verify_against_complex_ref_with_policy, verify_against_real_ref_with_policy, VerificationReport,
+    verify_against_complex_ref_parallel_with_policy, verify_against_complex_ref_with_policy,
+    verify_against_real_ref_parallel_with_policy, verify_against_real_ref_with_policy,
+    VerificationReport, VerifyParallelism,
 };
 use crate::{EmlError, EmlResult};
 
@@ -88,6 +91,15 @@ pub struct CompiledPipeline {
 }
 
 impl CompiledPipeline {
+    fn parallel_eval_supported(backend: BuiltinBackend) -> EmlResult<()> {
+        match backend {
+            BuiltinBackend::Tree | BuiltinBackend::Rpn => Ok(()),
+            BuiltinBackend::Bytecode => Err(EmlError::Unsupported(
+                "parallel batch evaluation currently supports only Tree/Rpn backends",
+            )),
+        }
+    }
+
     /// Returns the original source expression.
     pub fn source(&self) -> &SourceExpr {
         &self.source
@@ -158,6 +170,106 @@ impl CompiledPipeline {
         }
     }
 
+    /// Evaluates a batch of complex samples via one builtin backend.
+    pub fn eval_complex_batch(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<Complex64>],
+    ) -> EmlResult<Vec<Complex64>> {
+        samples
+            .iter()
+            .map(|vars| self.eval_complex(backend, vars))
+            .collect()
+    }
+
+    /// Evaluates a batch of real samples via one builtin backend.
+    pub fn eval_real_batch(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<f64>],
+    ) -> EmlResult<Vec<f64>> {
+        samples
+            .iter()
+            .map(|vars| self.eval_real(backend, vars))
+            .collect()
+    }
+
+    /// Evaluates complex samples in parallel across independent chunks.
+    ///
+    /// Only `Tree` and `Rpn` are supported in parallel mode for now.
+    pub fn eval_complex_batch_parallel(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<Complex64>],
+        parallelism: VerifyParallelism,
+    ) -> EmlResult<Vec<Complex64>> {
+        Self::parallel_eval_supported(backend)?;
+        let workers = parallelism.effective_workers(samples.len());
+        if workers <= 1 {
+            return self.eval_complex_batch(backend, samples);
+        }
+
+        let chunk_size = samples.len().div_ceil(workers);
+        thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            for chunk in samples.chunks(chunk_size) {
+                handles.push(scope.spawn(move || -> EmlResult<Vec<Complex64>> {
+                    chunk
+                        .iter()
+                        .map(|vars| self.eval_complex(backend, vars))
+                        .collect()
+                }));
+            }
+
+            let mut out = Vec::with_capacity(samples.len());
+            for handle in handles {
+                let chunk = handle
+                    .join()
+                    .expect("complex batch worker unexpectedly panicked")?;
+                out.extend(chunk);
+            }
+            Ok(out)
+        })
+    }
+
+    /// Evaluates real samples in parallel across independent chunks.
+    ///
+    /// Only `Tree` and `Rpn` are supported in parallel mode for now.
+    pub fn eval_real_batch_parallel(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<f64>],
+        parallelism: VerifyParallelism,
+    ) -> EmlResult<Vec<f64>> {
+        Self::parallel_eval_supported(backend)?;
+        let workers = parallelism.effective_workers(samples.len());
+        if workers <= 1 {
+            return self.eval_real_batch(backend, samples);
+        }
+
+        let chunk_size = samples.len().div_ceil(workers);
+        thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            for chunk in samples.chunks(chunk_size) {
+                handles.push(scope.spawn(move || -> EmlResult<Vec<f64>> {
+                    chunk
+                        .iter()
+                        .map(|vars| self.eval_real(backend, vars))
+                        .collect()
+                }));
+            }
+
+            let mut out = Vec::with_capacity(samples.len());
+            for handle in handles {
+                let chunk = handle
+                    .join()
+                    .expect("real batch worker unexpectedly panicked")?;
+                out.extend(chunk);
+            }
+            Ok(out)
+        })
+    }
+
     /// Measures builtin complex evaluation over a batch of samples.
     pub fn profile_eval_complex_batch(
         &self,
@@ -165,9 +277,7 @@ impl CompiledPipeline {
         samples: &[Vec<Complex64>],
     ) -> EmlResult<EvalMetrics> {
         let started = Instant::now();
-        for vars in samples {
-            let _ = self.eval_complex(backend, vars)?;
-        }
+        let _ = self.eval_complex_batch(backend, samples)?;
         let total = started.elapsed();
         let per_sample = if samples.is_empty() {
             total
@@ -179,6 +289,8 @@ impl CompiledPipeline {
             samples: samples.len(),
             total,
             per_sample,
+            parallel: false,
+            workers: 1,
         })
     }
 
@@ -189,9 +301,7 @@ impl CompiledPipeline {
         samples: &[Vec<f64>],
     ) -> EmlResult<EvalMetrics> {
         let started = Instant::now();
-        for vars in samples {
-            let _ = self.eval_real(backend, vars)?;
-        }
+        let _ = self.eval_real_batch(backend, samples)?;
         let total = started.elapsed();
         let per_sample = if samples.is_empty() {
             total
@@ -203,6 +313,60 @@ impl CompiledPipeline {
             samples: samples.len(),
             total,
             per_sample,
+            parallel: false,
+            workers: 1,
+        })
+    }
+
+    /// Measures parallel complex batch evaluation over independent samples.
+    pub fn profile_eval_complex_batch_parallel(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<Complex64>],
+        parallelism: VerifyParallelism,
+    ) -> EmlResult<EvalMetrics> {
+        let workers = parallelism.effective_workers(samples.len());
+        let started = Instant::now();
+        let _ = self.eval_complex_batch_parallel(backend, samples, parallelism)?;
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        Ok(EvalMetrics {
+            backend,
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: workers > 1,
+            workers,
+        })
+    }
+
+    /// Measures parallel real-valued batch evaluation over independent samples.
+    pub fn profile_eval_real_batch_parallel(
+        &self,
+        backend: BuiltinBackend,
+        samples: &[Vec<f64>],
+        parallelism: VerifyParallelism,
+    ) -> EmlResult<EvalMetrics> {
+        let workers = parallelism.effective_workers(samples.len());
+        let started = Instant::now();
+        let _ = self.eval_real_batch_parallel(backend, samples, parallelism)?;
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        Ok(EvalMetrics {
+            backend,
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: workers > 1,
+            workers,
         })
     }
 
@@ -231,6 +395,24 @@ impl CompiledPipeline {
         )
     }
 
+    /// Verifies builtin tree evaluation in parallel against a complex reference.
+    pub fn verify_against_complex_ref_parallel(
+        &self,
+        samples: &[Vec<Complex64>],
+        tolerance: f64,
+        parallelism: VerifyParallelism,
+        reference: impl Fn(&[Complex64]) -> Complex64 + Sync,
+    ) -> VerificationReport {
+        verify_against_complex_ref_parallel_with_policy(
+            &self.expr,
+            samples,
+            tolerance,
+            &self.eval_policy,
+            parallelism,
+            reference,
+        )
+    }
+
     /// Verifies builtin tree evaluation against a real reference.
     pub fn verify_against_real_ref(
         &self,
@@ -246,6 +428,131 @@ impl CompiledPipeline {
             &self.eval_policy,
             reference,
         )
+    }
+
+    /// Verifies builtin tree evaluation in parallel against a real reference.
+    pub fn verify_against_real_ref_parallel(
+        &self,
+        samples: &[Vec<f64>],
+        tolerance: f64,
+        parallelism: VerifyParallelism,
+        reference: impl Fn(&[f64]) -> f64 + Sync,
+    ) -> VerificationReport {
+        verify_against_real_ref_parallel_with_policy(
+            &self.expr,
+            samples,
+            self.imag_tolerance,
+            tolerance,
+            &self.eval_policy,
+            parallelism,
+            reference,
+        )
+    }
+
+    /// Measures serial complex verification against a reference function.
+    pub fn profile_verify_against_complex_ref(
+        &self,
+        samples: &[Vec<Complex64>],
+        tolerance: f64,
+        reference: impl Fn(&[Complex64]) -> Complex64,
+    ) -> VerifyMetrics {
+        let started = Instant::now();
+        let report = self.verify_against_complex_ref(samples, tolerance, reference);
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        VerifyMetrics {
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: false,
+            workers: 1,
+            report,
+        }
+    }
+
+    /// Measures parallel complex verification against a reference function.
+    pub fn profile_verify_against_complex_ref_parallel(
+        &self,
+        samples: &[Vec<Complex64>],
+        tolerance: f64,
+        parallelism: VerifyParallelism,
+        reference: impl Fn(&[Complex64]) -> Complex64 + Sync,
+    ) -> VerifyMetrics {
+        let workers = parallelism.effective_workers(samples.len());
+        let started = Instant::now();
+        let report =
+            self.verify_against_complex_ref_parallel(samples, tolerance, parallelism, reference);
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        VerifyMetrics {
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: workers > 1,
+            workers,
+            report,
+        }
+    }
+
+    /// Measures serial real-valued verification against a reference function.
+    pub fn profile_verify_against_real_ref(
+        &self,
+        samples: &[Vec<f64>],
+        tolerance: f64,
+        reference: impl Fn(&[f64]) -> f64,
+    ) -> VerifyMetrics {
+        let started = Instant::now();
+        let report = self.verify_against_real_ref(samples, tolerance, reference);
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        VerifyMetrics {
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: false,
+            workers: 1,
+            report,
+        }
+    }
+
+    /// Measures parallel real-valued verification against a reference function.
+    pub fn profile_verify_against_real_ref_parallel(
+        &self,
+        samples: &[Vec<f64>],
+        tolerance: f64,
+        parallelism: VerifyParallelism,
+        reference: impl Fn(&[f64]) -> f64 + Sync,
+    ) -> VerifyMetrics {
+        let workers = parallelism.effective_workers(samples.len());
+        let started = Instant::now();
+        let report =
+            self.verify_against_real_ref_parallel(samples, tolerance, parallelism, reference);
+        let total = started.elapsed();
+        let per_sample = if samples.is_empty() {
+            total
+        } else {
+            total.div_f64(samples.len() as f64)
+        };
+        VerifyMetrics {
+            samples: samples.len(),
+            total,
+            per_sample,
+            parallel: workers > 1,
+            workers,
+            report,
+        }
     }
 }
 

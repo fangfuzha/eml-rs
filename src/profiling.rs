@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use crate::api::BuiltinBackend;
+use crate::verify::VerificationReport;
 
 /// Stage-by-stage compile metrics collected by the high-level pipeline.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +67,27 @@ pub struct EvalMetrics {
     pub total: Duration,
     /// Average elapsed time per sample.
     pub per_sample: Duration,
+    /// Whether sample-level parallelism was used.
+    pub parallel: bool,
+    /// Effective worker count used for the batch.
+    pub workers: usize,
+}
+
+/// Verification metrics for tree-vs-reference comparisons.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VerifyMetrics {
+    /// Number of samples checked.
+    pub samples: usize,
+    /// Total elapsed time across verification.
+    pub total: Duration,
+    /// Average elapsed time per sample.
+    pub per_sample: Duration,
+    /// Whether sample-level parallelism was used.
+    pub parallel: bool,
+    /// Effective worker count used for the verification run.
+    pub workers: usize,
+    /// Aggregated verification result.
+    pub report: VerificationReport,
 }
 
 /// Bundle returned by profiled compilation helpers.
