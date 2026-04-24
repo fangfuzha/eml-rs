@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::ir::{eval_rpn_complex, Expr};
 use eml_rs::lowering::{
