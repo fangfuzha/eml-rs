@@ -15,6 +15,7 @@
 - 合并提交: `12d1413`
 - PR CI run: `24891283888`, `24891285458`
 - 结果: `changes`, `test`, `lint`, `no_std`, `coverage`, `supply-chain`, `compat` 全部通过。
+- 后续 main CI run: `24892142360`，验证 `dorny/paths-filter@v4.0.1` 后 `Node.js 20` runtime annotation 已消失。
 
 ### 手动 nightly bench-only
 - Run: `https://github.com/fangfuzha/eml-rs/actions/runs/24891397303`
@@ -43,6 +44,7 @@
 - Merge commit: `12d1413`
 - PR CI runs: `24891283888`, `24891285458`
 - Result: `changes`, `test`, `lint`, `no_std`, `coverage`, `supply-chain`, and `compat` all passed.
+- Follow-up main CI run: `24892142360`, verifying that the `Node.js 20` runtime annotation disappeared after switching to `dorny/paths-filter@v4.0.1`.
 
 ### Manual Nightly Bench-Only
 - Run: `https://github.com/fangfuzha/eml-rs/actions/runs/24891397303`

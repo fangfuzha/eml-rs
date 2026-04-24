@@ -12,6 +12,7 @@
 - 修正 `lower_verify_10k_nodes` 的样本域与容差，使其同时具备吞吐和正确性可读性。
 - 升级 dev benchmark 依赖 `criterion` 到 `0.8.2`，并将 benchmark 中的 `black_box` 切到 `std::hint::black_box`。
 - 修复远端 compat CI：宿主目标继续检查 `--all-targets`，非宿主交叉目标只检查生产构建面，避免 dev-dependency 的 C 编译链污染交叉编译。
+- 升级 `dorny/paths-filter` 到 `v4.0.1`，消除 GitHub Actions Node 20 runtime 弃用提示。
 
 ### 当前边界
 - Bytecode batch 已优先做单样本成本优化；并行化仍需基于 profiling 数据再决定。
@@ -30,6 +31,7 @@
 - Fixed the `lower_verify_10k_nodes` benchmark sample domain and tolerance so it reports both throughput and readable correctness.
 - Upgraded the dev benchmark dependency `criterion` to `0.8.2`, and switched benchmark `black_box` usage to `std::hint::black_box`.
 - Fixed remote compat CI: host targets still check `--all-targets`, while non-host cross targets check only the production build surface to avoid leaking dev-dependency C toolchains into cross builds.
+- Upgraded `dorny/paths-filter` to `v4.0.1`, removing the GitHub Actions Node 20 runtime deprecation annotation.
 
 ### Current Boundary
 - Bytecode batch optimization focuses on single-sample cost first; parallelization should still be driven by profiling data.

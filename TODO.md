@@ -121,6 +121,50 @@
 - [x] 生态集成路线（`docs/ecosystem.md`）
 - [x] 合规声明（`docs/compliance.md` + `LICENSE`）
 
+## P12: `v0.1.1` 正式发布
+- [ ] 确认 `main` 工作区干净，`v0.1.1` tag 尚未存在
+- [ ] 推送 `v0.1.1` tag 到远端
+- [ ] 等待 `release.yml` 在 Linux / Windows / macOS 上通过
+- [ ] 下载 release workflow artifacts，并压缩为 GitHub Release assets
+- [ ] 创建 GitHub Release `v0.1.1`，使用 `docs/releases/v0.1.1/release-notes.md` 作为说明
+- [ ] 验证 release 页面、tag、assets、CI 状态可访问
+
+## P13: 指标自动化补齐
+- [ ] 新增内存 RSS 采集脚本，覆盖 `1M nodes <= 1.0GB` 的人工验收项
+- [ ] 新增冷启动采集脚本，覆盖 `cold start <= 800ms` 的人工验收项
+- [ ] 将 RSS / cold-start 结果写入机器可读 JSON，便于后续 CI gate 使用
+- [ ] 更新 `docs/acceptance.md`，把可自动化部分从 `manual audit` 切到 `CI/manual tool enforced`
+- [ ] 在 nightly 或 workflow_dispatch 中加入轻量指标任务，避免每次 push 都跑重负载
+
+## P14: CLI MVP
+- [ ] 新增 `eml` CLI crate 或根 crate binary，保持库 API 不被 CLI 反向污染
+- [ ] 支持 `eml parse`：源表达式到结构化 `SourceExpr` 输出
+- [ ] 支持 `eml lower`：源表达式到 EML IR / stats 输出
+- [ ] 支持 `eml verify`：输入表达式与样本 JSON，执行 tree/RPN/bytecode 对照
+- [ ] 支持 `eml profile`：输出 lowering/simplify/bytecode/eval 分段耗时
+- [ ] 增加 CLI 示例文档与端到端测试
+
+## P15: API 稳定化
+- [ ] 梳理 public API，明确稳定入口、实验入口和内部入口
+- [ ] 为核心 public struct / enum / function 补齐 rustdoc 示例
+- [ ] 增加 `cargo doc` 检查，避免公开 API 文档持续退化
+- [ ] 建立 `deprecated` 流程示例，避免 0.x 阶段接口演进失控
+- [ ] 更新 `docs/versioning.md` 与 `docs/user-guide.md`，对齐实际 API 分层
+
+## P16: 反降级与生态互操作
+- [ ] 定义 portable graph JSON，作为 `SourceExpr / Expr` 对外交换格式
+- [ ] 实现 `SourceExpr -> portable graph JSON` 导出
+- [ ] 实现 `Expr -> portable graph JSON` 导出，保留 EML 节点语义
+- [ ] 增加 PyTorch/NumPy 对照脚本入口，作为研究验证后端
+- [ ] 增加文档说明：EML IR 如何反降级到目标框架算子图
+
+## P17: 性能第二轮
+- [ ] 基于 profiling 数据补齐 `100k nodes` 与更大 batch 的基准覆盖
+- [ ] 针对 bytecode eval 做第二轮单核热点优化，先压低单样本成本
+- [ ] 对 Tree/RPN 样本级并行做阈值调优，避免小 batch 并行反而变慢
+- [ ] 评估 Bytecode batch 是否值得并行化，要求先有 benchmark 证据
+- [ ] 将新的性能门槛写入 `benchmarks/gate.json`，避免优化回退
+
 ## 决策清单（需要你确认后执行）
 - [x] D1 核心能力定位：`统一 IR/编译优化框架`
 - [x] D2 核心场景优先级：`研究实验优先`
