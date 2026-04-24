@@ -29,6 +29,15 @@
   - `softmax_ce_bytecode_vs_tree_p99_batch1024 = 0.7417`，上限 `0.9500`
   - `lower_verify_10k_nodes_p99 = 1111634.45 ns/iter`，上限 `25000000.00`
 
+### 正式发布验证
+- Tag: `v0.1.1`
+- Release workflow: `https://github.com/fangfuzha/eml-rs/actions/runs/24894884509`
+- GitHub Release: `https://github.com/fangfuzha/eml-rs/releases/tag/v0.1.1`
+- Release assets:
+  - `eml-rs-v0.1.1-ubuntu-latest.zip`
+  - `eml-rs-v0.1.1-windows-latest.zip`
+  - `eml-rs-v0.1.1-macos-latest.zip`
+
 ## English
 
 ### Local Verification
@@ -57,3 +66,12 @@
   - `softmax_ce_bytecode_vs_tree_median_batch1024 = 0.7369`, limit `0.8500`
   - `softmax_ce_bytecode_vs_tree_p99_batch1024 = 0.7417`, limit `0.9500`
   - `lower_verify_10k_nodes_p99 = 1111634.45 ns/iter`, limit `25000000.00`
+
+### Formal Release Verification
+- Tag: `v0.1.1`
+- Release workflow: `https://github.com/fangfuzha/eml-rs/actions/runs/24894884509`
+- GitHub Release: `https://github.com/fangfuzha/eml-rs/releases/tag/v0.1.1`
+- Release assets:
+  - `eml-rs-v0.1.1-ubuntu-latest.zip`
+  - `eml-rs-v0.1.1-windows-latest.zip`
+  - `eml-rs-v0.1.1-macos-latest.zip`

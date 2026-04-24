@@ -122,12 +122,12 @@
 - [x] 合规声明（`docs/compliance.md` + `LICENSE`）
 
 ## P12: `v0.1.1` 正式发布
-- [ ] 确认 `main` 工作区干净，`v0.1.1` tag 尚未存在
-- [ ] 推送 `v0.1.1` tag 到远端
-- [ ] 等待 `release.yml` 在 Linux / Windows / macOS 上通过
-- [ ] 下载 release workflow artifacts，并压缩为 GitHub Release assets
-- [ ] 创建 GitHub Release `v0.1.1`，使用 `docs/releases/v0.1.1/release-notes.md` 作为说明
-- [ ] 验证 release 页面、tag、assets、CI 状态可访问
+- [x] 确认 `main` 工作区干净，`v0.1.1` tag 尚未存在
+- [x] 推送 `v0.1.1` tag 到远端
+- [x] 等待 `release.yml` 在 Linux / Windows / macOS 上通过
+- [x] 下载 release workflow artifacts，并压缩为 GitHub Release assets
+- [x] 创建 GitHub Release `v0.1.1`，使用 `docs/releases/v0.1.1/release-notes.md` 作为说明
+- [x] 验证 release 页面、tag、assets、CI 状态可访问
 
 ## P13: 指标自动化补齐
 - [ ] 新增内存 RSS 采集脚本，覆盖 `1M nodes <= 1.0GB` 的人工验收项
