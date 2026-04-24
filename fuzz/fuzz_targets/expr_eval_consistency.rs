@@ -6,6 +6,24 @@ use eml_rs::ir::{eval_rpn_complex_with_policy, Expr};
 use libfuzzer_sys::fuzz_target;
 use num_complex::Complex64;
 
+fn same_or_close(lhs: Complex64, rhs: Complex64, tol: f64) -> bool {
+    if lhs.re.is_finite() && lhs.im.is_finite() && rhs.re.is_finite() && rhs.im.is_finite() {
+        return (lhs - rhs).norm() <= tol;
+    }
+
+    fn scalar_eq(lhs: f64, rhs: f64, tol: f64) -> bool {
+        if lhs.is_nan() || rhs.is_nan() {
+            return lhs.is_nan() && rhs.is_nan();
+        }
+        if lhs.is_infinite() || rhs.is_infinite() {
+            return lhs == rhs;
+        }
+        (lhs - rhs).abs() <= tol
+    }
+
+    scalar_eq(lhs.re, rhs.re, tol) && scalar_eq(lhs.im, rhs.im, tol)
+}
+
 fn decode_expr(data: &[u8], index: &mut usize, depth: usize) -> Expr {
     if depth >= 6 || *index >= data.len() {
         return Expr::one();
@@ -51,7 +69,7 @@ fuzz_target!(|data: &[u8]| {
     let bytecode = prog.eval_complex_with_policy(&vars, &EvalPolicy::relaxed()).ok();
 
     if let (Some(tree), Some(rpn_v), Some(bytecode)) = (tree, rpn_v, bytecode) {
-        assert!((tree - rpn_v).norm() <= 1e-8);
-        assert!((tree - bytecode).norm() <= 1e-8);
+        assert!(same_or_close(tree, rpn_v, 1e-8));
+        assert!(same_or_close(tree, bytecode, 1e-8));
     }
 });

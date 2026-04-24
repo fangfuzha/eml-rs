@@ -6,7 +6,7 @@ resolver = "2"
 name = "eml-rs"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.86"
 description = "Minimal EML operator library skeleton: core + IR + verification."
 license = "MIT"
 

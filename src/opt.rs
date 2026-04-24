@@ -244,6 +244,9 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
             if is_zero(b) {
                 return *a.clone();
             }
+            if a == b {
+                return SourceExpr::Mul(Box::new(SourceExpr::Int(2)), Box::new((**a).clone()));
+            }
             if let (Some(ra), Some(rb)) = (as_rational(a), as_rational(b)) {
                 return from_rational(ra.0 * rb.1 + rb.0 * ra.1, ra.1 * rb.1);
             }
@@ -252,6 +255,9 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Sub(a, b) => {
             if is_zero(b) {
                 return *a.clone();
+            }
+            if a == b {
+                return SourceExpr::Int(0);
             }
             if let (Some(ra), Some(rb)) = (as_rational(a), as_rational(b)) {
                 return from_rational(ra.0 * rb.1 - rb.0 * ra.1, ra.1 * rb.1);
@@ -280,6 +286,9 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
             if is_one(b) {
                 return *a.clone();
             }
+            if a == b {
+                return SourceExpr::Int(1);
+            }
             if let (Some(ra), Some(rb)) = (as_rational(a), as_rational(b)) {
                 if rb.0 != 0 {
                     return from_rational(ra.0 * rb.1, ra.1 * rb.0);
@@ -293,6 +302,16 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
             }
             if is_one(b) {
                 return *a.clone();
+            }
+            if is_one(a) {
+                return SourceExpr::Int(1);
+            }
+            if is_zero(a) {
+                if let Some((n, d)) = as_rational(b) {
+                    if d == 1 && n > 0 {
+                        return SourceExpr::Int(0);
+                    }
+                }
             }
             if let (Some((p, q)), Some((n, d))) = (as_rational(a), as_rational(b)) {
                 if d == 1 && (-8..=8).contains(&n) {
@@ -518,5 +537,198 @@ mod tests {
         let opt = optimize_for_lowering(&expr);
         let vars = vec![Complex64::new(0.2, 0.1), Complex64::new(1.1, -0.2)];
         assert!(semantically_equivalent_on_sample(&expr, &opt, &vars, 1e-10));
+    }
+
+    #[test]
+    fn optimize_collapses_duplicate_addition() {
+        let leaf = SourceExpr::Log(Box::new(SourceExpr::Add(
+            Box::new(SourceExpr::var(0)),
+            Box::new(SourceExpr::Int(2)),
+        )));
+        let expr = SourceExpr::Add(Box::new(leaf.clone()), Box::new(leaf.clone()));
+        let opt = optimize_for_lowering(&expr);
+        assert_eq!(
+            opt,
+            SourceExpr::Mul(Box::new(SourceExpr::Int(2)), Box::new(leaf))
+        );
+    }
+
+    #[test]
+    fn optimize_eliminates_self_subtraction_and_division() {
+        let var = SourceExpr::var(0);
+        let sub = SourceExpr::Sub(Box::new(var.clone()), Box::new(var.clone()));
+        let div = SourceExpr::Div(Box::new(var.clone()), Box::new(var));
+        assert_eq!(optimize_for_lowering(&sub), SourceExpr::Int(0));
+        assert_eq!(optimize_for_lowering(&div), SourceExpr::Int(1));
+    }
+
+    #[test]
+    fn optimize_folds_pow_identity_bases() {
+        let one_pow = SourceExpr::Pow(Box::new(SourceExpr::Int(1)), Box::new(SourceExpr::var(0)));
+        let zero_pow = SourceExpr::Pow(Box::new(SourceExpr::Int(0)), Box::new(SourceExpr::Int(3)));
+        assert_eq!(optimize_for_lowering(&one_pow), SourceExpr::Int(1));
+        assert_eq!(optimize_for_lowering(&zero_pow), SourceExpr::Int(0));
+    }
+
+    #[test]
+    fn estimate_cost_visits_extended_function_variants() {
+        let expr = SourceExpr::Add(
+            Box::new(SourceExpr::Tan(Box::new(SourceExpr::var(0)))),
+            Box::new(SourceExpr::Add(
+                Box::new(SourceExpr::Tanh(Box::new(SourceExpr::var(0)))),
+                Box::new(SourceExpr::Add(
+                    Box::new(SourceExpr::Asin(Box::new(SourceExpr::var(0)))),
+                    Box::new(SourceExpr::Add(
+                        Box::new(SourceExpr::Acos(Box::new(SourceExpr::var(0)))),
+                        Box::new(SourceExpr::Add(
+                            Box::new(SourceExpr::Atan(Box::new(SourceExpr::var(0)))),
+                            Box::new(SourceExpr::Add(
+                                Box::new(SourceExpr::Sqrt(Box::new(SourceExpr::var(1)))),
+                                Box::new(SourceExpr::Add(
+                                    Box::new(SourceExpr::Sigmoid(Box::new(SourceExpr::var(0)))),
+                                    Box::new(SourceExpr::Add(
+                                        Box::new(SourceExpr::Softplus(Box::new(SourceExpr::var(
+                                            0,
+                                        )))),
+                                        Box::new(SourceExpr::Add(
+                                            Box::new(SourceExpr::Swish(Box::new(SourceExpr::var(
+                                                0,
+                                            )))),
+                                            Box::new(SourceExpr::Add(
+                                                Box::new(SourceExpr::GeluTanh(Box::new(
+                                                    SourceExpr::var(0),
+                                                ))),
+                                                Box::new(SourceExpr::Add(
+                                                    Box::new(SourceExpr::ReluSoft(Box::new(
+                                                        SourceExpr::var(0),
+                                                    ))),
+                                                    Box::new(SourceExpr::Add(
+                                                        Box::new(SourceExpr::Elu(
+                                                            Box::new(SourceExpr::var(0)),
+                                                            Box::new(SourceExpr::Int(1)),
+                                                        )),
+                                                        Box::new(SourceExpr::Add(
+                                                            Box::new(SourceExpr::LeakyRelu(
+                                                                Box::new(SourceExpr::var(0)),
+                                                                Box::new(SourceExpr::Rational(
+                                                                    1, 10,
+                                                                )),
+                                                            )),
+                                                            Box::new(SourceExpr::Add(
+                                                                Box::new(SourceExpr::Softsign(
+                                                                    Box::new(SourceExpr::var(0)),
+                                                                )),
+                                                                Box::new(SourceExpr::Mish(
+                                                                    Box::new(SourceExpr::var(0)),
+                                                                )),
+                                                            )),
+                                                        )),
+                                                    )),
+                                                )),
+                                            )),
+                                        )),
+                                    )),
+                                )),
+                            )),
+                        )),
+                    )),
+                )),
+            )),
+        );
+        let cost = estimate_cost(&expr);
+        assert!(cost.exp_calls > 0);
+        assert!(cost.log_calls > 0);
+        assert!(cost.score > cost.exp_calls + cost.log_calls);
+    }
+
+    #[test]
+    fn optimize_folds_zero_valued_function_forms() {
+        let zero = SourceExpr::Int(0);
+        let half = SourceExpr::Rational(1, 2);
+        let cases = vec![
+            (SourceExpr::Sin(Box::new(zero.clone())), zero.clone()),
+            (SourceExpr::Cos(Box::new(zero.clone())), SourceExpr::Int(1)),
+            (SourceExpr::Tan(Box::new(zero.clone())), zero.clone()),
+            (SourceExpr::Sinh(Box::new(zero.clone())), zero.clone()),
+            (SourceExpr::Cosh(Box::new(zero.clone())), SourceExpr::Int(1)),
+            (SourceExpr::Tanh(Box::new(zero.clone())), zero.clone()),
+            (SourceExpr::Sigmoid(Box::new(zero.clone())), half),
+            (SourceExpr::Swish(Box::new(zero.clone())), zero.clone()),
+            (
+                SourceExpr::Elu(Box::new(zero.clone()), Box::new(SourceExpr::Int(3))),
+                zero.clone(),
+            ),
+            (
+                SourceExpr::LeakyRelu(
+                    Box::new(zero.clone()),
+                    Box::new(SourceExpr::Rational(1, 10)),
+                ),
+                zero.clone(),
+            ),
+            (SourceExpr::Softsign(Box::new(zero.clone())), zero.clone()),
+            (SourceExpr::Mish(Box::new(zero.clone())), zero),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(optimize_for_lowering(&expr), expected, "{expr:?}");
+        }
+    }
+
+    #[test]
+    fn optimize_cancels_inverse_forms_and_folds_rationals() {
+        let var = SourceExpr::var(0);
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Neg(Box::new(SourceExpr::Neg(Box::new(
+                var.clone(),
+            ))))),
+            var.clone()
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Exp(Box::new(SourceExpr::Log(Box::new(
+                var.clone(),
+            ))))),
+            var.clone()
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Log(Box::new(SourceExpr::Exp(Box::new(
+                var.clone(),
+            ))))),
+            var
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Add(
+                Box::new(SourceExpr::Rational(1, 2)),
+                Box::new(SourceExpr::Rational(1, 3)),
+            )),
+            SourceExpr::Rational(5, 6)
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Sub(
+                Box::new(SourceExpr::Rational(5, 6)),
+                Box::new(SourceExpr::Rational(1, 3)),
+            )),
+            SourceExpr::Rational(1, 2)
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Mul(
+                Box::new(SourceExpr::Rational(2, 3)),
+                Box::new(SourceExpr::Rational(3, 5)),
+            )),
+            SourceExpr::Rational(2, 5)
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Div(
+                Box::new(SourceExpr::Rational(2, 3)),
+                Box::new(SourceExpr::Rational(4, 5)),
+            )),
+            SourceExpr::Rational(5, 6)
+        );
+        assert_eq!(
+            optimize_for_lowering(&SourceExpr::Pow(
+                Box::new(SourceExpr::Rational(3, 2)),
+                Box::new(SourceExpr::Int(2)),
+            )),
+            SourceExpr::Rational(9, 4)
+        );
     }
 }

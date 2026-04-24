@@ -54,7 +54,7 @@
 ### 稳定性承诺
 - `1.0` 前允许在 minor 版本中调整 API，但必须更新迁移说明。
 - `1.0` 后遵守 SemVer。
-- MSRV 冻结为 `Rust 1.75`，如需升级必须在版本文档中显式说明。
+- MSRV 冻结为 `Rust 1.86`，如需升级必须在版本文档中显式说明。
 
 ## English
 
@@ -110,4 +110,4 @@
 ### Stability Commitments
 - Before `1.0`, minor releases may adjust APIs, but migration notes must be updated.
 - After `1.0`, SemVer applies.
-- MSRV is frozen at `Rust 1.75`; any bump must be documented in the versioning policy.
+- MSRV is frozen at `Rust 1.86`; any bump must be documented in the versioning policy.

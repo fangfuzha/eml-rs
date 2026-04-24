@@ -4,6 +4,7 @@
 //! - common subexpression elimination (CSE) via register reuse;
 //! - constant folding into `LoadConst`.
 
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 
 use num_complex::Complex64;
@@ -106,11 +107,23 @@ impl BytecodeProgram {
         vars: &[Complex64],
         policy: &EvalPolicy,
     ) -> Result<Complex64, EmlError> {
+        let mut regs = self.new_register_file()?;
+        self.eval_complex_with_registers(vars, policy, &mut regs)
+    }
+
+    fn new_register_file(&self) -> Result<Vec<Complex64>, EmlError> {
         if self.register_count == 0 {
             return Err(EmlError::Unsupported("bytecode program has zero registers"));
         }
+        Ok(vec![Complex64::new(0.0, 0.0); self.register_count])
+    }
 
-        let mut regs = vec![Complex64::new(0.0, 0.0); self.register_count];
+    fn eval_complex_with_registers(
+        &self,
+        vars: &[Complex64],
+        policy: &EvalPolicy,
+        regs: &mut [Complex64],
+    ) -> Result<Complex64, EmlError> {
         for inst in &self.instructions {
             match inst {
                 Instruction::LoadOne { dst } => {
@@ -133,20 +146,35 @@ impl BytecodeProgram {
         Ok(regs[self.output])
     }
 
-    /// Executes bytecode over complex inputs with default policy.
-    pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
-        self.eval_complex_with_policy(vars, &EvalPolicy::default())
-    }
-
-    /// Executes bytecode over real inputs with explicit policy.
-    pub fn eval_real_with_policy(
+    fn eval_real_with_registers(
         &self,
         vars: &[f64],
         imag_tolerance: f64,
         policy: &EvalPolicy,
+        regs: &mut [Complex64],
     ) -> Result<f64, EmlError> {
-        let vars_complex: Vec<Complex64> = vars.iter().map(|v| Complex64::new(*v, 0.0)).collect();
-        let out = self.eval_complex_with_policy(&vars_complex, policy)?;
+        for inst in &self.instructions {
+            match inst {
+                Instruction::LoadOne { dst } => {
+                    regs[*dst] = Complex64::new(1.0, 0.0);
+                }
+                Instruction::LoadVar { dst, index } => {
+                    let value = vars.get(*index).copied().ok_or(EmlError::MissingVariable {
+                        index: *index,
+                        arity: vars.len(),
+                    })?;
+                    regs[*dst] = Complex64::new(value, 0.0);
+                }
+                Instruction::LoadConst { dst, value } => {
+                    regs[*dst] = *value;
+                }
+                Instruction::Eml { dst, lhs, rhs } => {
+                    regs[*dst] = eml_complex_with_policy(regs[*lhs], regs[*rhs], policy)?;
+                }
+            }
+        }
+
+        let out = regs[self.output];
         if out.im.abs() > imag_tolerance {
             return Err(EmlError::NonRealOutput {
                 imag: out.im,
@@ -156,9 +184,79 @@ impl BytecodeProgram {
         Ok(out.re)
     }
 
+    /// Executes bytecode over complex inputs with default policy.
+    pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
+        self.eval_complex_with_policy(vars, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over a complex batch while reusing one register file.
+    pub fn eval_complex_batch_with_policy(
+        &self,
+        samples: &[Vec<Complex64>],
+        policy: &EvalPolicy,
+    ) -> Result<Vec<Complex64>, EmlError> {
+        if samples.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut regs = self.new_register_file()?;
+        let mut out = Vec::with_capacity(samples.len());
+        for vars in samples {
+            out.push(self.eval_complex_with_registers(vars, policy, &mut regs)?);
+        }
+        Ok(out)
+    }
+
+    /// Executes bytecode over a complex batch with default policy.
+    pub fn eval_complex_batch(
+        &self,
+        samples: &[Vec<Complex64>],
+    ) -> Result<Vec<Complex64>, EmlError> {
+        self.eval_complex_batch_with_policy(samples, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over real inputs with explicit policy.
+    pub fn eval_real_with_policy(
+        &self,
+        vars: &[f64],
+        imag_tolerance: f64,
+        policy: &EvalPolicy,
+    ) -> Result<f64, EmlError> {
+        let mut regs = self.new_register_file()?;
+        self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)
+    }
+
     /// Executes bytecode over real inputs with default policy.
     pub fn eval_real(&self, vars: &[f64], imag_tolerance: f64) -> Result<f64, EmlError> {
         self.eval_real_with_policy(vars, imag_tolerance, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over a real batch while reusing one register file.
+    pub fn eval_real_batch_with_policy(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+        policy: &EvalPolicy,
+    ) -> Result<Vec<f64>, EmlError> {
+        if samples.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut regs = self.new_register_file()?;
+        let mut out = Vec::with_capacity(samples.len());
+        for vars in samples {
+            out.push(self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)?);
+        }
+        Ok(out)
+    }
+
+    /// Executes bytecode over a real batch with default policy.
+    pub fn eval_real_batch(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+    ) -> Result<Vec<f64>, EmlError> {
+        self.eval_real_batch_with_policy(samples, imag_tolerance, &EvalPolicy::default())
     }
 }
 
@@ -166,9 +264,30 @@ impl BytecodeProgram {
 struct Builder<'a> {
     instructions: Vec<Instruction>,
     next_reg: usize,
-    cse: HashMap<String, usize>,
-    const_cache: HashMap<String, Option<Complex64>>,
+    next_key: usize,
+    key_ids: HashMap<NodeKey, usize>,
+    compiled: HashMap<usize, CompiledNode>,
     policy: &'a EvalPolicy,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum NodeKey {
+    One,
+    Var(usize),
+    Eml(usize, usize),
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CompiledNode {
+    reg: usize,
+    const_value: Option<Complex64>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CompileEntry {
+    key_id: usize,
+    reg: usize,
+    const_value: Option<Complex64>,
 }
 
 impl<'a> Builder<'a> {
@@ -176,8 +295,9 @@ impl<'a> Builder<'a> {
         Self {
             instructions: Vec::new(),
             next_reg: 0,
-            cse: HashMap::new(),
-            const_cache: HashMap::new(),
+            next_key: 0,
+            key_ids: HashMap::new(),
+            compiled: HashMap::new(),
             policy,
         }
     }
@@ -188,65 +308,108 @@ impl<'a> Builder<'a> {
         r
     }
 
-    fn compile_cse(&mut self, expr: &Expr) -> Result<usize, EmlError> {
-        let key = expr.fingerprint();
-        if let Some(reg) = self.cse.get(&key).copied() {
-            return Ok(reg);
+    fn intern_key(&mut self, key: NodeKey) -> usize {
+        match self.key_ids.entry(key) {
+            Entry::Occupied(entry) => *entry.get(),
+            Entry::Vacant(entry) => {
+                let id = self.next_key;
+                self.next_key += 1;
+                entry.insert(id);
+                id
+            }
+        }
+    }
+
+    fn cached_entry(&self, key_id: usize) -> Option<CompileEntry> {
+        self.compiled.get(&key_id).map(|compiled| CompileEntry {
+            key_id,
+            reg: compiled.reg,
+            const_value: compiled.const_value,
+        })
+    }
+
+    fn compile_leaf(
+        &mut self,
+        key: NodeKey,
+        const_value: Option<Complex64>,
+        instruction: Instruction,
+    ) -> CompileEntry {
+        let key_id = self.intern_key(key);
+        if let Some(entry) = self.cached_entry(key_id) {
+            return entry;
         }
 
-        let reg = if let Some(value) = self.const_value(expr) {
-            let dst = self.alloc();
-            self.instructions
-                .push(Instruction::LoadConst { dst, value });
-            dst
-        } else {
-            match expr {
-                Expr::One => {
-                    let dst = self.alloc();
-                    self.instructions.push(Instruction::LoadOne { dst });
-                    dst
-                }
-                Expr::Var(index) => {
-                    let dst = self.alloc();
-                    self.instructions
-                        .push(Instruction::LoadVar { dst, index: *index });
-                    dst
-                }
-                Expr::Eml(lhs, rhs) => {
-                    let l = self.compile_cse(lhs)?;
-                    let r = self.compile_cse(rhs)?;
-                    let dst = self.alloc();
-                    self.instructions.push(Instruction::Eml {
-                        dst,
-                        lhs: l,
-                        rhs: r,
-                    });
-                    dst
-                }
+        let reg = self.alloc();
+        let inst = match instruction {
+            Instruction::LoadOne { .. } => Instruction::LoadOne { dst: reg },
+            Instruction::LoadVar { index, .. } => Instruction::LoadVar { dst: reg, index },
+            Instruction::LoadConst { value, .. } => Instruction::LoadConst { dst: reg, value },
+            Instruction::Eml { .. } => {
+                unreachable!("leaf compilation only accepts leaf instructions")
             }
         };
+        self.instructions.push(inst);
+        self.compiled
+            .insert(key_id, CompiledNode { reg, const_value });
+        CompileEntry {
+            key_id,
+            reg,
+            const_value,
+        }
+    }
 
-        self.cse.insert(key, reg);
+    fn compile_cse(&mut self, expr: &Expr) -> Result<usize, EmlError> {
+        let CompileEntry { reg, .. } = self.compile_entry(expr)?;
         Ok(reg)
     }
 
-    fn const_value(&mut self, expr: &Expr) -> Option<Complex64> {
-        let key = expr.fingerprint();
-        if let Some(cached) = self.const_cache.get(&key) {
-            return *cached;
-        }
-
-        let val = match expr {
-            Expr::One => Some(Complex64::new(1.0, 0.0)),
-            Expr::Var(_) => None,
+    fn compile_entry(&mut self, expr: &Expr) -> Result<CompileEntry, EmlError> {
+        match expr {
+            Expr::One => Ok(self.compile_leaf(
+                NodeKey::One,
+                Some(Complex64::new(1.0, 0.0)),
+                Instruction::LoadOne { dst: 0 },
+            )),
+            Expr::Var(index) => Ok(self.compile_leaf(
+                NodeKey::Var(*index),
+                None,
+                Instruction::LoadVar {
+                    dst: 0,
+                    index: *index,
+                },
+            )),
             Expr::Eml(lhs, rhs) => {
-                let l = self.const_value(lhs)?;
-                let r = self.const_value(rhs)?;
-                eml_complex_with_policy(l, r, self.policy).ok()
+                let lhs_entry = self.compile_entry(lhs)?;
+                let rhs_entry = self.compile_entry(rhs)?;
+                let key_id = self.intern_key(NodeKey::Eml(lhs_entry.key_id, rhs_entry.key_id));
+                if let Some(entry) = self.cached_entry(key_id) {
+                    return Ok(entry);
+                }
+
+                let const_value = match (lhs_entry.const_value, rhs_entry.const_value) {
+                    (Some(l), Some(r)) => eml_complex_with_policy(l, r, self.policy).ok(),
+                    _ => None,
+                };
+                let reg = self.alloc();
+                if let Some(value) = const_value {
+                    self.instructions
+                        .push(Instruction::LoadConst { dst: reg, value });
+                } else {
+                    self.instructions.push(Instruction::Eml {
+                        dst: reg,
+                        lhs: lhs_entry.reg,
+                        rhs: rhs_entry.reg,
+                    });
+                }
+                self.compiled
+                    .insert(key_id, CompiledNode { reg, const_value });
+                Ok(CompileEntry {
+                    key_id,
+                    reg,
+                    const_value,
+                })
             }
-        };
-        self.const_cache.insert(key, val);
-        val
+        }
     }
 }
 
@@ -285,5 +448,39 @@ mod tests {
             .instructions
             .iter()
             .any(|inst| matches!(inst, Instruction::LoadConst { .. })));
+    }
+
+    #[test]
+    fn complex_batch_eval_matches_scalar_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![
+            vec![Complex64::new(0.1, 0.0), Complex64::new(0.2, 0.0)],
+            vec![Complex64::new(0.3, 0.0), Complex64::new(0.4, 0.0)],
+            vec![Complex64::new(0.5, 0.0), Complex64::new(0.6, 0.0)],
+        ];
+
+        let scalar: Vec<_> = samples
+            .iter()
+            .map(|vars| prog.eval_complex(vars).unwrap())
+            .collect();
+        let batch = prog.eval_complex_batch(&samples).unwrap();
+
+        assert_eq!(batch, scalar);
+    }
+
+    #[test]
+    fn real_batch_eval_matches_scalar_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![vec![0.1, 0.2], vec![0.3, 0.4], vec![0.5, 0.6]];
+
+        let scalar: Vec<_> = samples
+            .iter()
+            .map(|vars| prog.eval_real(vars, 1e-12).unwrap())
+            .collect();
+        let batch = prog.eval_real_batch(&samples, 1e-12).unwrap();
+
+        assert_eq!(batch, scalar);
     }
 }
