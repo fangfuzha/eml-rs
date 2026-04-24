@@ -1483,6 +1483,11 @@ fn eml_gelu_tanh(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
     Ok(eml_mul(half, eml_mul(z, eml_add(LoweredExpr::one(), t))))
 }
 
+/// Tree-only lowering duplicates subexpressions, so exact integer literals must
+/// stay small enough to avoid exponential memory growth during repeated
+/// doubling.
+const MAX_EXACT_INT_ABS: u64 = 1 << 16;
+
 fn eml_int(n: i64) -> Result<LoweredExpr, LoweringError> {
     if n == 1 {
         return Ok(LoweredExpr::one());
@@ -1490,13 +1495,21 @@ fn eml_int(n: i64) -> Result<LoweredExpr, LoweringError> {
     if n == 0 {
         return Ok(eml_zero());
     }
+    let magnitude = n.unsigned_abs();
+    if magnitude > MAX_EXACT_INT_ABS {
+        return Err(LoweringError::Overflow(
+            "integer literal too large for exact tree lowering",
+        ));
+    }
     if n < 0 {
-        return Ok(eml_neg(eml_int(-n)?));
+        let positive = i64::try_from(magnitude)
+            .map_err(|_| LoweringError::Overflow("integer magnitude does not fit i64"))?;
+        return Ok(eml_neg(eml_int(positive)?));
     }
 
     let mut acc: Option<LoweredExpr> = None;
     let mut term = LoweredExpr::one();
-    let mut k = n as u64;
+    let mut k = magnitude;
     while k > 0 {
         if (k & 1) == 1 {
             acc = Some(match acc {
@@ -1941,6 +1954,18 @@ mod tests {
             LoweredExpr::Eml(_, _) => {}
             _ => panic!("unexpected lowered tree shape: {eml:?}"),
         }
+    }
+
+    #[test]
+    fn lower_rejects_large_integer_literals_before_tree_blow_up() {
+        for literal in ["515111", "-515111"] {
+            let source = parse_source_expr(literal).unwrap();
+            let err = lower_to_eml(&source).unwrap_err();
+            assert!(matches!(err, LoweringError::Overflow(_)));
+        }
+
+        let ok = parse_source_expr("1024").unwrap();
+        assert!(lower_to_eml(&ok).is_ok());
     }
 
     #[test]
