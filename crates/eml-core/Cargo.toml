@@ -1,6 +1,6 @@
 [package]
 name = "eml-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.86"
 description = "no_std core EML primitives and numeric policies."
