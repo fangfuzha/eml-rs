@@ -65,9 +65,11 @@ jobs:
               - ".github/workflows/**"
               - "benches/**"
               - "crates/**"
+              - "docs/**"
               - "examples/**"
               - "fuzz/**"
               - "include/**"
+              - "README.md"
               - "scripts/**"
               - "src/**"
               - "tests/**"
@@ -172,6 +174,10 @@ jobs:
         run: cargo fmt -- --check
       - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
+      - name: Check public API docs
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps
 
   no_std:
     needs: changes

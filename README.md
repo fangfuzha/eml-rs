@@ -23,6 +23,7 @@
 - 架构设计 / Architecture: `docs/architecture.md`
 - 使用者指南 / User guide: `docs/user-guide.md`
 - CLI 使用说明 / CLI guide: `docs/cli.md`
+- API 稳定性 / API stability: `docs/api-stability.md`
 - 开发者指南 / Developer guide: `docs/developer-guide.md`
 - 版本策略 / Versioning: `docs/versioning.md`
 - 测试与质量 / Testing: `docs/testing.md`

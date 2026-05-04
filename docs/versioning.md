@@ -15,9 +15,19 @@
 - `README.md` 与 `docs/*.md` 的主分支内容代表最新开发线。
 
 ### 弃用流程
-1. 在文档中标记 deprecated。
-2. 至少保留一个 minor 周期。
-3. 删除前在发布说明中给出替代路径。
+1. 在代码中添加 `#[deprecated(since = "...", note = "...")]`，并保留兼容实现。
+2. 在 `docs/api-stability.md` 和对应使用文档中标记 deprecated，写明替代入口。
+3. 至少保留一个 minor 周期。
+4. 删除前在发布说明中给出替代路径。
+
+当前代码级流程示例是 `eml_rs::api::compile_expression()`，替代入口是 `eml_rs::api::compile()`。
+
+### API 分层
+- Stable API：`compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, `core::EvalPolicy`。
+- Experimental API：`ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `plugin`, Rust 侧 `ffi`。
+- Internal API：不建议生产代码直接依赖的实现细节；当前公开仅服务研究实验和调试。
+
+完整规则见 `docs/api-stability.md`。
 
 ## English
 
@@ -34,6 +44,16 @@
 - `README.md` and the top-level `docs/*.md` files on the main branch describe the latest development line.
 
 ### Deprecation Flow
-1. Mark the item as deprecated in docs.
-2. Keep it for at least one minor cycle.
-3. Provide a replacement path before removal.
+1. Add `#[deprecated(since = "...", note = "...")]` in code and keep a compatibility implementation.
+2. Mark the item as deprecated in `docs/api-stability.md` and the relevant user docs, with a replacement entry.
+3. Keep it for at least one minor cycle.
+4. Provide a replacement path before removal.
+
+The current code-level workflow example is `eml_rs::api::compile_expression()`, replaced by `eml_rs::api::compile()`.
+
+### API Tiers
+- Stable API: `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, `core::EvalPolicy`.
+- Experimental API: `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `plugin`, Rust-side `ffi`.
+- Internal API: implementation details not recommended for production dependencies; public mainly for research and debugging.
+
+See `docs/api-stability.md` for the full policy.

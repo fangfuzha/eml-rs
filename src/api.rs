@@ -27,7 +27,18 @@ use crate::verify::{
 };
 use crate::{EmlError, EmlResult};
 
-/// Builtin evaluator choices exposed by the high-level API.
+/// 内置执行后端选择。
+///
+/// # 示例
+///
+/// ```rust
+/// use eml_rs::api::{compile, BuiltinBackend};
+///
+/// let pipeline = compile("exp(x0) - log(x1)")?;
+/// let value = pipeline.eval_real(BuiltinBackend::Bytecode, &[0.5, 2.0])?;
+/// println!("{value}");
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltinBackend {
     /// Recursive tree evaluation.
@@ -38,7 +49,28 @@ pub enum BuiltinBackend {
     Bytecode,
 }
 
-/// Compile-time options for the high-level pipeline.
+/// 高层编译流程的配置项。
+///
+/// # 示例
+///
+/// ```rust
+/// use eml_rs::api::{PipelineBuilder, PipelineOptions};
+/// use eml_rs::core::EvalPolicy;
+///
+/// let options = PipelineOptions {
+///     eval_policy: EvalPolicy::relaxed(),
+///     ..PipelineOptions::default()
+/// };
+/// let pipeline = PipelineBuilder::new()
+///     .with_options(options)
+///     .compile_str("mish(x0)")?;
+/// let value = pipeline.eval_complex(
+///     eml_rs::api::BuiltinBackend::Bytecode,
+///     &[num_complex::Complex64::new(0.5, 0.0)],
+/// )?;
+/// println!("{value}");
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct PipelineOptions {
     /// Whether to run builtin source optimization before user passes.
@@ -62,7 +94,17 @@ impl Default for PipelineOptions {
     }
 }
 
-/// Compact compile report for observability and docs examples.
+/// 编译产物的轻量报告。
+///
+/// # 示例
+///
+/// ```rust
+/// let pipeline = eml_rs::api::compile("softplus(x0) + sigmoid(x0)")?;
+/// let report = pipeline.report();
+/// assert!(report.input_source_nodes > 0);
+/// assert!(report.expr_stats.nodes > 0);
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PipelineReport {
     /// Source expression node count before optimization.
@@ -77,7 +119,19 @@ pub struct PipelineReport {
     pub used_builtin_optimization: bool,
 }
 
-/// Fully compiled pipeline artifact.
+/// 完整编译后的 pipeline 产物。
+///
+/// # 示例
+///
+/// ```rust
+/// use eml_rs::api::{compile, BuiltinBackend};
+///
+/// let pipeline = compile("sigmoid(x0)")?;
+/// let tree = pipeline.eval_real(BuiltinBackend::Tree, &[0.25])?;
+/// let bytecode = pipeline.eval_real(BuiltinBackend::Bytecode, &[0.25])?;
+/// assert!((tree - bytecode).abs() <= 1e-12);
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompiledPipeline {
     source: SourceExpr,
@@ -588,7 +642,18 @@ impl CompiledPipeline {
     }
 }
 
-/// High-level builder with optional research-time extension hooks.
+/// 高层 pipeline builder，支持研究阶段插入 pass、backend 和 observer。
+///
+/// # 示例
+///
+/// ```rust
+/// use eml_rs::api::{BuiltinBackend, PipelineBuilder};
+///
+/// let pipeline = PipelineBuilder::new().compile_str("exp(x0) - log(x1)")?;
+/// let value = pipeline.eval_real(BuiltinBackend::Rpn, &[0.2, 1.4])?;
+/// println!("{value}");
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 #[derive(Default)]
 pub struct PipelineBuilder {
     options: PipelineOptions,
@@ -783,9 +848,41 @@ impl PipelineBuilder {
     }
 }
 
-/// Compiles an infix expression with default pipeline options.
+/// 使用默认配置编译中缀表达式。
+///
+/// `compile()` 是当前推荐的稳定入口；需要控制 pass、策略或 observer 时，
+/// 使用 [`PipelineBuilder`]。
+///
+/// # 示例
+///
+/// ```rust
+/// use eml_rs::api::{compile, BuiltinBackend};
+///
+/// let pipeline = compile("softplus(x0)")?;
+/// let value = pipeline.eval_real(BuiltinBackend::Bytecode, &[0.5])?;
+/// assert!(value.is_finite());
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
 pub fn compile(input: &str) -> EmlResult<CompiledPipeline> {
     PipelineBuilder::new().compile_str(input)
+}
+
+/// `compile()` 的旧别名，仅保留用于演示弃用流程。
+///
+/// # 示例
+///
+/// ```rust
+/// #[allow(deprecated)]
+/// let pipeline = eml_rs::api::compile_expression("exp(x0)")?;
+/// assert!(pipeline.report().expr_stats.nodes > 0);
+/// # Ok::<(), eml_rs::EmlError>(())
+/// ```
+#[deprecated(
+    since = "0.1.1",
+    note = "请使用 compile；此别名用于演示 0.x API 弃用流程"
+)]
+pub fn compile_expression(input: &str) -> EmlResult<CompiledPipeline> {
+    compile(input)
 }
 
 fn emit(observers: &[Box<dyn PipelineObserver>], event: PipelineEvent) {

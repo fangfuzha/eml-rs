@@ -146,11 +146,11 @@
 - [x] 增加 CLI 示例文档与端到端测试
 
 ## P15: API 稳定化
-- [ ] 梳理 public API，明确稳定入口、实验入口和内部入口
-- [ ] 为核心 public struct / enum / function 补齐 rustdoc 示例
-- [ ] 增加 `cargo doc` 检查，避免公开 API 文档持续退化
-- [ ] 建立 `deprecated` 流程示例，避免 0.x 阶段接口演进失控
-- [ ] 更新 `docs/versioning.md` 与 `docs/user-guide.md`，对齐实际 API 分层
+- [x] 梳理 public API，明确稳定入口、实验入口和内部入口
+- [x] 为核心 public struct / enum / function 补齐 rustdoc 示例
+- [x] 增加 `cargo doc` 检查，避免公开 API 文档持续退化
+- [x] 建立 `deprecated` 流程示例，避免 0.x 阶段接口演进失控
+- [x] 更新 `docs/versioning.md` 与 `docs/user-guide.md`，对齐实际 API 分层
 
 ## P16: 反降级与生态互操作
 - [ ] 定义 portable graph JSON，作为 `SourceExpr / Expr` 对外交换格式

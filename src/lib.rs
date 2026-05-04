@@ -13,6 +13,16 @@
 //! - [`profiling`]: compile/evaluate timing helpers for research profiling.
 //! - [`verify`]: numeric cross-check helpers.
 //! - [`ffi`]: C ABI exports for embedding.
+//!
+//! # API 稳定性分层
+//!
+//! - Stable API: [`api::compile`], [`api::PipelineBuilder`],
+//!   [`api::CompiledPipeline`], [`api::BuiltinBackend`],
+//!   [`api::PipelineOptions`], [`error`], [`core::EvalPolicy`]。
+//! - Experimental API: [`ir`], [`bytecode`], [`lowering`], [`opt`],
+//!   [`verify`], [`profiling`], [`plugin`]。
+//! - Internal API: 当前公开仅服务研究实验和调试，生产使用应优先走
+//!   Stable API。
 
 pub mod api;
 pub mod bytecode;

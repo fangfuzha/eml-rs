@@ -7,6 +7,7 @@
 - `architecture.md`: 分层架构、跨层规则、API 层级
 - `user-guide.md`: 快速上手、概念、最佳实践、FAQ
 - `cli.md`: CLI parse/lower/verify/profile 示例
+- `api-stability.md`: Stable/Experimental/Internal API 分层与弃用流程
 - `developer-guide.md`: 开发环境、调试路径、贡献建议
 - `versioning.md`: SemVer、MSRV、文档版本化
 - `observability.md`: 可观测性方案
@@ -23,6 +24,7 @@
 - `architecture.md`: layers, cross-layer rules, API tiers
 - `user-guide.md`: quick start, concepts, best practices, FAQ
 - `cli.md`: CLI parse/lower/verify/profile examples
+- `api-stability.md`: Stable/Experimental/Internal API tiers and deprecation flow
 - `developer-guide.md`: dev environment, debugging path, contribution guidance
 - `versioning.md`: SemVer, MSRV, documentation versioning
 - `observability.md`: observability strategy

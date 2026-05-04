@@ -35,6 +35,13 @@ println!("{value}");
 3. 需要研究统一 IR 时，直接操作 `Expr` 与 `BytecodeProgram`。
 4. 需要可信对照时，用 `verify` 模块或 `CompiledPipeline::verify_*`。
 
+### API 分层
+- Stable API：默认选择 `compile()`、`PipelineBuilder`、`CompiledPipeline`、`BuiltinBackend`、`PipelineOptions`、`error::*`、`core::EvalPolicy`。
+- Experimental API：研究时可使用 `ir`、`bytecode`、`lowering`、`opt`、`verify`、`profiling`、`plugin`，但升级前要阅读 release notes。
+- Internal API：不建议生产代码依赖；若必须使用，应锁定精确 patch 版本。
+
+`compile_expression()` 是 deprecated 流程示例；新代码应使用 `compile()`。
+
 ### 最佳实践
 - 研究阶段优先用高层 API，先把语义与验证走通，再下沉到低层模块。
 - 对训练模板保持“先表达统一、后平台特化”的思路，不要一开始就把 EML 当最终部署格式。
@@ -86,6 +93,13 @@ println!("{value}");
 2. Drop to `SourceExpr` when you need pre-lowering rewrites.
 3. Drop to `Expr` and `BytecodeProgram` when researching unified IR execution.
 4. Use `verify` or `CompiledPipeline::verify_*` for trusted comparisons.
+
+### API Tiers
+- Stable API: default to `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, and `core::EvalPolicy`.
+- Experimental API: use `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, and `plugin` for research, but read release notes before upgrading.
+- Internal API: not recommended for production dependencies; pin an exact patch version if you must use it.
+
+`compile_expression()` is a deprecation workflow example. New code should use `compile()`.
 
 ### Best Practices
 - Prefer the high-level API first, then drop into low-level modules only where the experiment needs it.
