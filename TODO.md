@@ -138,12 +138,12 @@
 - [x] 在 nightly 或 workflow_dispatch 中加入轻量指标任务，避免每次 push 都跑重负载
 
 ## P14: CLI MVP
-- [ ] 新增 `eml` CLI crate 或根 crate binary，保持库 API 不被 CLI 反向污染
-- [ ] 支持 `eml parse`：源表达式到结构化 `SourceExpr` 输出
-- [ ] 支持 `eml lower`：源表达式到 EML IR / stats 输出
-- [ ] 支持 `eml verify`：输入表达式与样本 JSON，执行 tree/RPN/bytecode 对照
-- [ ] 支持 `eml profile`：输出 lowering/simplify/bytecode/eval 分段耗时
-- [ ] 增加 CLI 示例文档与端到端测试
+- [x] 新增 `eml` CLI crate 或根 crate binary，保持库 API 不被 CLI 反向污染
+- [x] 支持 `eml parse`：源表达式到结构化 `SourceExpr` 输出
+- [x] 支持 `eml lower`：源表达式到 EML IR / stats 输出
+- [x] 支持 `eml verify`：输入表达式与样本 JSON，执行 tree/RPN/bytecode 对照
+- [x] 支持 `eml profile`：输出 lowering/simplify/bytecode/eval 分段耗时
+- [x] 增加 CLI 示例文档与端到端测试
 
 ## P15: API 稳定化
 - [ ] 梳理 public API，明确稳定入口、实验入口和内部入口

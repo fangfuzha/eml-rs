@@ -22,6 +22,7 @@
 - 验收标准 / Acceptance: `docs/acceptance.md`
 - 架构设计 / Architecture: `docs/architecture.md`
 - 使用者指南 / User guide: `docs/user-guide.md`
+- CLI 使用说明 / CLI guide: `docs/cli.md`
 - 开发者指南 / Developer guide: `docs/developer-guide.md`
 - 版本策略 / Versioning: `docs/versioning.md`
 - 测试与质量 / Testing: `docs/testing.md`
@@ -139,7 +140,17 @@ cargo run --example symbolic_regression_loop
 cargo run --example pipeline_api
 ```
 
-### 5.3 C ABI 示例
+### 5.3 CLI 快速检查
+
+```bash
+cargo run --bin eml -- parse "exp(x0) - log(x1)"
+cargo run --bin eml -- lower "softplus(x0) + sigmoid(x0)"
+cargo run --bin eml -- profile "exp(x0) - log(x1)" --sample-count 32
+```
+
+更多命令见 `docs/cli.md`。
+
+### 5.4 C ABI 示例
 
 ```bash
 cargo build --release
