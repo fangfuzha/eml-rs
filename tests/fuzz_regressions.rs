@@ -112,6 +112,7 @@ fn autodiff_simplify_corpus_contains_regression_seeds() {
             "branchy_activation_mix",
             "mish(x0) + elu(x0,0.5) + leaky_relu(x0,0.1)",
         ),
+        ("pow_i64_min_neg_overflow", "x0*02^-8^21"),
     ];
 
     for (name, source) in expected {
@@ -135,6 +136,7 @@ fn autodiff_simplify_corpus_examples_parse_and_evaluate() {
         "transcendental_product",
         "activation_mix",
         "branchy_activation_mix",
+        "pow_i64_min_neg_overflow",
     ] {
         let path = corpus_file("autodiff_simplify", name);
         let input = fs::read_to_string(path).unwrap();

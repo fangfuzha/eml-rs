@@ -15,14 +15,145 @@ on:
           - bench-only
           - quality-only
 
+permissions:
+  actions: read
+  contents: read
+
 concurrency:
   group: nightly-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  nightly-quality:
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target != 'bench-only'
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      quality_required: ${{ steps.detect.outputs.quality_required }}
+      bench_required: ${{ steps.detect.outputs.bench_required }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect nightly-relevant changes
+        id: detect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET: ${{ github.event.inputs.target || 'all' }}
+        run: |
+          set -euo pipefail
+
+          quality_patterns=(
+            ".github/workflows/nightly.yml"
+            "Cargo.toml"
+            "Cargo.lock"
+            "crates/"
+            "examples/"
+            "fuzz/"
+            "include/"
+            "src/"
+            "tests/"
+          )
+          bench_patterns=(
+            ".github/workflows/nightly.yml"
+            "Cargo.toml"
+            "Cargo.lock"
+            "benchmarks/"
+            "benches/"
+            "crates/"
+            "include/"
+            "scripts/bench_gate.py"
+            "src/"
+          )
+
+          set_required() {
+            echo "quality_required=$1" >> "$GITHUB_OUTPUT"
+            echo "bench_required=$2" >> "$GITHUB_OUTPUT"
+            echo "quality_required=$1"
+            echo "bench_required=$2"
+          }
+
+          matches_any() {
+            local path="$1"
+            shift
+            local pattern
+            for pattern in "$@"; do
+              if [[ "$pattern" == */ ]]; then
+                [[ "$path" == "$pattern"* ]] && return 0
+              elif [[ "$path" == "$pattern" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$TARGET" in
+              bench-only) set_required false true ;;
+              quality-only) set_required true false ;;
+              *) set_required true true ;;
+            esac
+            exit 0
+          fi
+
+          current_sha="$(git rev-parse HEAD)"
+          previous_sha="$(
+            gh run list \
+              --workflow nightly.yml \
+              --branch "${GITHUB_REF_NAME:-main}" \
+              --event schedule \
+              --status success \
+              --limit 1 \
+              --json headSha \
+              --jq '.[0].headSha // empty' || true
+          )"
+
+          if [[ -z "$previous_sha" ]]; then
+            echo "No successful scheduled nightly run found; running all nightly jobs."
+            set_required true true
+            exit 0
+          fi
+
+          if [[ "$previous_sha" == "$current_sha" ]]; then
+            echo "Current commit already had a successful scheduled nightly run."
+            set_required false false
+            exit 0
+          fi
+
+          if ! git cat-file -e "${previous_sha}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=200 origin "$previous_sha" || true
+          fi
+
+          if ! git cat-file -e "${previous_sha}^{commit}" 2>/dev/null; then
+            echo "Could not fetch previous successful nightly commit; running all nightly jobs."
+            set_required true true
+            exit 0
+          fi
+
+          mapfile -t changed_files < <(git diff --name-only "$previous_sha" "$current_sha")
+          if [[ "${#changed_files[@]}" -eq 0 ]]; then
+            echo "No changed files since previous successful scheduled nightly run."
+            set_required false false
+            exit 0
+          fi
+
+          quality_required=false
+          bench_required=false
+          echo "Changed files since $previous_sha:"
+          for path in "${changed_files[@]}"; do
+            echo "  $path"
+            matches_any "$path" "${quality_patterns[@]}" && quality_required=true
+            matches_any "$path" "${bench_patterns[@]}" && bench_required=true
+          done
+
+          set_required "$quality_required" "$bench_required"
+
+  nightly-quality:
+    needs: changes
+    if: needs.changes.outputs.quality_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust nightly
@@ -47,8 +178,10 @@ jobs:
         run: cargo fuzz run autodiff_simplify --target x86_64-unknown-linux-gnu -- -max_total_time=60
 
   nightly-bench:
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.target != 'quality-only'
+    needs: changes
+    if: needs.changes.outputs.bench_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust nightly

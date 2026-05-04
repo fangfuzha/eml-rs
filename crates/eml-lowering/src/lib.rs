@@ -974,12 +974,15 @@ fn try_fold_pow(a: &SourceExpr, b: &SourceExpr) -> Option<SourceExpr> {
         return Some(src_one());
     }
     if exp > 0 {
-        let n = pow_i128_checked(base_n as i128, exp as u32)?;
-        let d = pow_i128_checked(base_d as i128, exp as u32)?;
+        let exp = u32::try_from(exp).ok()?;
+        let n = pow_i128_checked(base_n as i128, exp)?;
+        let d = pow_i128_checked(base_d as i128, exp)?;
         return rational_expr_from_i128(n, d);
     }
 
-    let abs_exp = (-exp) as u32;
+    let abs_exp = exp
+        .checked_neg()
+        .and_then(|value| u32::try_from(value).ok())?;
     let n = pow_i128_checked(base_n as i128, abs_exp)?;
     let d = pow_i128_checked(base_d as i128, abs_exp)?;
     if n == 0 {

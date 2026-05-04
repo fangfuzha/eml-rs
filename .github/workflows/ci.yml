@@ -3,42 +3,62 @@ name: ci
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which CI workload to run
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - test-only
+          - quality-only
+          - supply-chain-only
+          - compat-only
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || 'auto' }}
   cancel-in-progress: true
 
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
-      matrix_required: ${{ steps.filter.outputs.matrix_required }}
-      lint_required: ${{ steps.filter.outputs.lint_required }}
-      no_std_required: ${{ steps.filter.outputs.no_std_required }}
-      coverage_required: ${{ steps.filter.outputs.coverage_required }}
-      supply_chain_required: ${{ steps.filter.outputs.supply_chain_required }}
+      test_required: ${{ steps.route.outputs.test_required }}
+      compat_required: ${{ steps.route.outputs.compat_required }}
+      lint_required: ${{ steps.route.outputs.lint_required }}
+      no_std_required: ${{ steps.route.outputs.no_std_required }}
+      coverage_required: ${{ steps.route.outputs.coverage_required }}
+      supply_chain_required: ${{ steps.route.outputs.supply_chain_required }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Detect matrix-relevant changes
+        if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v4.0.1
         id: filter
         with:
           filters: |
-            matrix_required:
+            test_required:
               - "Cargo.toml"
               - "Cargo.lock"
-              - ".github/workflows/**"
-              - "benchmarks/**"
-              - "benches/**"
+              - ".github/workflows/ci.yml"
               - "crates/**"
               - "examples/**"
               - "fuzz/**"
               - "include/**"
-              - "scripts/**"
               - "src/**"
               - "tests/**"
+            compat_required:
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".cargo/**"
+              - ".github/workflows/ci.yml"
+              - "crates/**"
+              - "src/**"
             lint_required:
               - "Cargo.toml"
               - "Cargo.lock"
@@ -60,13 +80,10 @@ jobs:
             coverage_required:
               - "Cargo.toml"
               - "Cargo.lock"
-              - ".github/workflows/**"
-              - "benchmarks/**"
-              - "benches/**"
+              - ".github/workflows/ci.yml"
               - "crates/**"
               - "examples/**"
               - "include/**"
-              - "scripts/**"
               - "src/**"
               - "tests/**"
             supply_chain_required:
@@ -76,15 +93,59 @@ jobs:
               - ".cargo/**"
               - ".github/workflows/**"
               - "deny.toml"
+      - name: Resolve requested CI workload
+        id: route
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET: ${{ github.event.inputs.target || 'all' }}
+          FILTER_TEST: ${{ steps.filter.outputs.test_required }}
+          FILTER_COMPAT: ${{ steps.filter.outputs.compat_required }}
+          FILTER_LINT: ${{ steps.filter.outputs.lint_required }}
+          FILTER_NO_STD: ${{ steps.filter.outputs.no_std_required }}
+          FILTER_COVERAGE: ${{ steps.filter.outputs.coverage_required }}
+          FILTER_SUPPLY_CHAIN: ${{ steps.filter.outputs.supply_chain_required }}
+        run: |
+          set -euo pipefail
+
+          set_required() {
+            echo "test_required=$1" >> "$GITHUB_OUTPUT"
+            echo "compat_required=$2" >> "$GITHUB_OUTPUT"
+            echo "lint_required=$3" >> "$GITHUB_OUTPUT"
+            echo "no_std_required=$4" >> "$GITHUB_OUTPUT"
+            echo "coverage_required=$5" >> "$GITHUB_OUTPUT"
+            echo "supply_chain_required=$6" >> "$GITHUB_OUTPUT"
+          }
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$TARGET" in
+              all) set_required true true true true true true ;;
+              test-only) set_required true false false false false false ;;
+              quality-only) set_required false false true true true false ;;
+              supply-chain-only) set_required false false false false false true ;;
+              compat-only) set_required false true false false false false ;;
+              *) echo "Unsupported CI target: $TARGET" >&2; exit 1 ;;
+            esac
+            exit 0
+          fi
+
+          set_required \
+            "${FILTER_TEST:-false}" \
+            "${FILTER_COMPAT:-false}" \
+            "${FILTER_LINT:-false}" \
+            "${FILTER_NO_STD:-false}" \
+            "${FILTER_COVERAGE:-false}" \
+            "${FILTER_SUPPLY_CHAIN:-false}"
 
   test:
     needs: changes
-    if: needs.changes.outputs.matrix_required == 'true'
+    if: needs.changes.outputs.test_required == 'true'
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust stable
@@ -100,6 +161,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.lint_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust stable
@@ -115,6 +177,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.no_std_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust stable
@@ -130,6 +193,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.coverage_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust stable
@@ -143,8 +207,9 @@ jobs:
 
   compat:
     needs: changes
-    if: needs.changes.outputs.matrix_required == 'true'
+    if: needs.changes.outputs.compat_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -173,6 +238,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.supply_chain_required == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust stable
