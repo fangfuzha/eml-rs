@@ -26,7 +26,7 @@ fn build_balanced_add_tree(mut nodes: Vec<SourceExpr>) -> SourceExpr {
         }
         nodes = next;
     }
-    nodes.pop().unwrap_or_else(|| SourceExpr::Int(0))
+    nodes.pop().unwrap_or(SourceExpr::Int(0))
 }
 
 fn build_target_sized_source_expr(target_nodes: usize) -> SourceExpr {

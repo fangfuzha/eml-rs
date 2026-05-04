@@ -2,7 +2,7 @@ use std::fs;
 use std::process::Command;
 
 fn eml_bin() -> &'static str {
-    option_env!("CARGO_BIN_EXE_eml").expect("cargo should expose the eml binary path")
+    env!("CARGO_BIN_EXE_eml")
 }
 
 #[test]
