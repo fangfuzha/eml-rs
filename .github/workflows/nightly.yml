@@ -14,6 +14,7 @@ on:
           - all
           - bench-only
           - quality-only
+          - metrics-only
 
 permissions:
   actions: read
@@ -30,6 +31,7 @@ jobs:
     outputs:
       quality_required: ${{ steps.detect.outputs.quality_required }}
       bench_required: ${{ steps.detect.outputs.bench_required }}
+      metrics_required: ${{ steps.detect.outputs.metrics_required }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -66,12 +68,24 @@ jobs:
             "scripts/bench_gate.py"
             "src/"
           )
+          metrics_patterns=(
+            ".github/workflows/nightly.yml"
+            "Cargo.toml"
+            "Cargo.lock"
+            "crates/"
+            "examples/metrics_probe.rs"
+            "examples/pipeline_api.rs"
+            "scripts/collect_metrics.py"
+            "src/"
+          )
 
           set_required() {
             echo "quality_required=$1" >> "$GITHUB_OUTPUT"
             echo "bench_required=$2" >> "$GITHUB_OUTPUT"
+            echo "metrics_required=$3" >> "$GITHUB_OUTPUT"
             echo "quality_required=$1"
             echo "bench_required=$2"
+            echo "metrics_required=$3"
           }
 
           matches_any() {
@@ -90,9 +104,10 @@ jobs:
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             case "$TARGET" in
-              bench-only) set_required false true ;;
-              quality-only) set_required true false ;;
-              *) set_required true true ;;
+              bench-only) set_required false true false ;;
+              quality-only) set_required true false false ;;
+              metrics-only) set_required false false true ;;
+              *) set_required true true true ;;
             esac
             exit 0
           fi
@@ -111,13 +126,13 @@ jobs:
 
           if [[ -z "$previous_sha" ]]; then
             echo "No successful scheduled nightly run found; running all nightly jobs."
-            set_required true true
+            set_required true true true
             exit 0
           fi
 
           if [[ "$previous_sha" == "$current_sha" ]]; then
             echo "Current commit already had a successful scheduled nightly run."
-            set_required false false
+            set_required false false false
             exit 0
           fi
 
@@ -127,27 +142,29 @@ jobs:
 
           if ! git cat-file -e "${previous_sha}^{commit}" 2>/dev/null; then
             echo "Could not fetch previous successful nightly commit; running all nightly jobs."
-            set_required true true
+            set_required true true true
             exit 0
           fi
 
           mapfile -t changed_files < <(git diff --name-only "$previous_sha" "$current_sha")
           if [[ "${#changed_files[@]}" -eq 0 ]]; then
             echo "No changed files since previous successful scheduled nightly run."
-            set_required false false
+            set_required false false false
             exit 0
           fi
 
           quality_required=false
           bench_required=false
+          metrics_required=false
           echo "Changed files since $previous_sha:"
           for path in "${changed_files[@]}"; do
             echo "  $path"
             matches_any "$path" "${quality_patterns[@]}" && quality_required=true
             matches_any "$path" "${bench_patterns[@]}" && bench_required=true
+            matches_any "$path" "${metrics_patterns[@]}" && metrics_required=true
           done
 
-          set_required "$quality_required" "$bench_required"
+          set_required "$quality_required" "$bench_required" "$metrics_required"
 
   nightly-quality:
     needs: changes
@@ -194,3 +211,29 @@ jobs:
         run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
       - name: Ensure release build for C ABI path
         run: cargo build --release -q
+
+  nightly-metrics:
+    needs: changes
+    if: needs.changes.outputs.metrics_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Collect lightweight metrics
+        run: |
+          python3 scripts/collect_metrics.py \
+            --rss-nodes 100000 \
+            --samples 4 \
+            --cold-runs 3 \
+            --require-rss \
+            --output target/eml-metrics.json
+      - name: Upload metrics report
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-metrics
+          path: target/eml-metrics.json
+          if-no-files-found: error

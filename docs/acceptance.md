@@ -22,8 +22,8 @@
 | `verify + lowering` 延迟 | `10k nodes` 基准 `P99 <= 25ms` | `CI enforced`：`lower_verify_10k_nodes` |
 | `bytecode/tree` 比值 | `median <= 0.85` 且 `P99 <= 0.95` | `CI enforced`：`shared_eml_*` 与 `softmax_ce_*_batch1024` 基准门禁 |
 | `RPN/tree` 比值 | `median <= 1.10` | `CI enforced`：`eml_ln_rpn_eval` 对比门禁 |
-| 峰值内存 | `1M nodes <= 1.0GB` | `manual audit`：当前未接入 RSS 自动采集 |
-| 冷启动 | `<= 800ms` | `manual audit`：当前未接入启动时间探针 |
+| 峰值内存 | `1M nodes <= 1.0GB` | `manual tool enforced`：`python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`；nightly 使用 `100k nodes` 轻量采样 |
+| 冷启动 | `<= 800ms` | `manual tool enforced`：`python3 scripts/collect_metrics.py` 输出 `cold_start.median_ms` 并按阈值返回状态 |
 
 ### 质量验收
 
@@ -55,7 +55,7 @@
 ### 说明
 - 当前基准门禁基于 Criterion 的 `sample.json` 计算每次迭代归一化后的 `P95/P99`，并使用 `tukey.json` 的 mild fence 剔除测量异常值，用于近似稳定的 tail latency。
 - `1k/10k/100k nodes` 与 `batch 32/256/1024` 的全量覆盖是数据集目标；其中目前自动阻断的重点是 `10k nodes` 与 `batch1024` 关键门槛。
-- 尚未自动化的内存与冷启动指标会在后续增加专门采集脚本前保持人工核验状态。
+- 内存与冷启动指标已接入 `scripts/collect_metrics.py`，输出 `target/eml-metrics.json`；nightly/workflow_dispatch 使用轻量规模采样，`1M nodes` 仍作为发布前人工工具门禁运行。
 
 ## English
 
@@ -79,8 +79,8 @@ Each rule is labeled as either `CI enforced` or `manual audit`.
 | `verify + lowering` latency | `P99 <= 25ms` for the `10k nodes` benchmark | `CI enforced`: `lower_verify_10k_nodes` |
 | `bytecode/tree` ratio | `median <= 0.85` and `P99 <= 0.95` | `CI enforced`: `shared_eml_*` and `softmax_ce_*_batch1024` benchmark gate |
 | `RPN/tree` ratio | `median <= 1.10` | `CI enforced`: `eml_ln_rpn_eval` ratio gate |
-| Peak memory | `1M nodes <= 1.0GB` | `manual audit`: RSS collection not wired in yet |
-| Cold start | `<= 800ms` | `manual audit`: startup probe not wired in yet |
+| Peak memory | `1M nodes <= 1.0GB` | `manual tool enforced`: `python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`; nightly uses a lightweight `100k nodes` sample |
+| Cold start | `<= 800ms` | `manual tool enforced`: `python3 scripts/collect_metrics.py` emits `cold_start.median_ms` and exits according to the threshold |
 
 ### Quality Acceptance
 
@@ -112,4 +112,4 @@ Each rule is labeled as either `CI enforced` or `manual audit`.
 ### Notes
 - The benchmark gate derives normalized `P95/P99` from Criterion `sample.json` and uses the `tukey.json` mild fences to drop measurement outliers, yielding a more stable tail-latency approximation for CI.
 - Full coverage of `1k/10k/100k nodes` and `batch 32/256/1024` remains the target dataset envelope; the current blocking gates focus on the `10k nodes` and `batch1024` thresholds first.
-- Memory and cold-start metrics stay in `manual audit` mode until dedicated collection scripts are added.
+- Memory and cold-start metrics are wired through `scripts/collect_metrics.py`, which writes `target/eml-metrics.json`; nightly/workflow_dispatch uses a lightweight sample, while `1M nodes` remains a pre-release manual-tool gate.

@@ -131,11 +131,11 @@
 - [x] 修正 `release.yml`，后续 tag push 自动创建 GitHub Release 并上传 assets
 
 ## P13: 指标自动化补齐
-- [ ] 新增内存 RSS 采集脚本，覆盖 `1M nodes <= 1.0GB` 的人工验收项
-- [ ] 新增冷启动采集脚本，覆盖 `cold start <= 800ms` 的人工验收项
-- [ ] 将 RSS / cold-start 结果写入机器可读 JSON，便于后续 CI gate 使用
-- [ ] 更新 `docs/acceptance.md`，把可自动化部分从 `manual audit` 切到 `CI/manual tool enforced`
-- [ ] 在 nightly 或 workflow_dispatch 中加入轻量指标任务，避免每次 push 都跑重负载
+- [x] 新增内存 RSS 采集脚本，覆盖 `1M nodes <= 1.0GB` 的人工验收项
+- [x] 新增冷启动采集脚本，覆盖 `cold start <= 800ms` 的人工验收项
+- [x] 将 RSS / cold-start 结果写入机器可读 JSON，便于后续 CI gate 使用
+- [x] 更新 `docs/acceptance.md`，把可自动化部分从 `manual audit` 切到 `CI/manual tool enforced`
+- [x] 在 nightly 或 workflow_dispatch 中加入轻量指标任务，避免每次 push 都跑重负载
 
 ## P14: CLI MVP
 - [ ] 新增 `eml` CLI crate 或根 crate binary，保持库 API 不被 CLI 反向污染
