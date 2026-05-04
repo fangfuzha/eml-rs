@@ -118,7 +118,7 @@ jobs:
         with:
           ref: ${{ needs.validate-release-tag.outputs.release_tag }}
       - name: Download packaged assets
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: release-assets-*
           path: dist
