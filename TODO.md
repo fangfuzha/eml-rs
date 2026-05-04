@@ -153,11 +153,11 @@
 - [x] 更新 `docs/versioning.md` 与 `docs/user-guide.md`，对齐实际 API 分层
 
 ## P16: 反降级与生态互操作
-- [ ] 定义 portable graph JSON，作为 `SourceExpr / Expr` 对外交换格式
-- [ ] 实现 `SourceExpr -> portable graph JSON` 导出
-- [ ] 实现 `Expr -> portable graph JSON` 导出，保留 EML 节点语义
-- [ ] 增加 PyTorch/NumPy 对照脚本入口，作为研究验证后端
-- [ ] 增加文档说明：EML IR 如何反降级到目标框架算子图
+- [x] 定义 portable graph JSON，作为 `SourceExpr / Expr` 对外交换格式
+- [x] 实现 `SourceExpr -> portable graph JSON` 导出
+- [x] 实现 `Expr -> portable graph JSON` 导出，保留 EML 节点语义
+- [x] 增加 PyTorch/NumPy 对照脚本入口，作为研究验证后端
+- [x] 增加文档说明：EML IR 如何反降级到目标框架算子图
 
 ## P17: 性能第二轮
 - [ ] 基于 profiling 数据补齐 `100k nodes` 与更大 batch 的基准覆盖

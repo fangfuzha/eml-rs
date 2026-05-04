@@ -24,7 +24,7 @@
 
 ### API 分层
 - Stable API：`compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, `core::EvalPolicy`。
-- Experimental API：`ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `plugin`, Rust 侧 `ffi`。
+- Experimental API：`ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `portable`, `plugin`, Rust 侧 `ffi`。
 - Internal API：不建议生产代码直接依赖的实现细节；当前公开仅服务研究实验和调试。
 
 完整规则见 `docs/api-stability.md`。
@@ -53,7 +53,7 @@ The current code-level workflow example is `eml_rs::api::compile_expression()`, 
 
 ### API Tiers
 - Stable API: `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, `core::EvalPolicy`.
-- Experimental API: `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `plugin`, Rust-side `ffi`.
+- Experimental API: `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, `portable`, `plugin`, Rust-side `ffi`.
 - Internal API: implementation details not recommended for production dependencies; public mainly for research and debugging.
 
 See `docs/api-stability.md` for the full policy.

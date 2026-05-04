@@ -10,6 +10,7 @@
 //! - [`lowering`]: compatibility wrapper for the standalone parser/lowering crate.
 //! - [`opt`]: rewrite rules and cost model utilities.
 //! - [`plugin`]: extension points for research-time passes/backends/observers.
+//! - [`portable`]: JSON graph export for framework interoperability.
 //! - [`profiling`]: compile/evaluate timing helpers for research profiling.
 //! - [`verify`]: numeric cross-check helpers.
 //! - [`ffi`]: C ABI exports for embedding.
@@ -20,7 +21,7 @@
 //!   [`api::CompiledPipeline`], [`api::BuiltinBackend`],
 //!   [`api::PipelineOptions`], [`error`], [`core::EvalPolicy`]。
 //! - Experimental API: [`ir`], [`bytecode`], [`lowering`], [`opt`],
-//!   [`verify`], [`profiling`], [`plugin`]。
+//!   [`verify`], [`profiling`], [`plugin`], [`portable`]。
 //! - Internal API: 当前公开仅服务研究实验和调试，生产使用应优先走
 //!   Stable API。
 
@@ -33,6 +34,7 @@ pub mod ir;
 pub mod lowering;
 pub mod opt;
 pub mod plugin;
+pub mod portable;
 pub mod profiling;
 pub mod verify;
 

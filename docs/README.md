@@ -8,6 +8,7 @@
 - `user-guide.md`: 快速上手、概念、最佳实践、FAQ
 - `cli.md`: CLI parse/lower/verify/profile 示例
 - `api-stability.md`: Stable/Experimental/Internal API 分层与弃用流程
+- `interoperability.md`: portable graph JSON、PyTorch/NumPy 对照、反降级说明
 - `developer-guide.md`: 开发环境、调试路径、贡献建议
 - `versioning.md`: SemVer、MSRV、文档版本化
 - `observability.md`: 可观测性方案
@@ -25,6 +26,7 @@
 - `user-guide.md`: quick start, concepts, best practices, FAQ
 - `cli.md`: CLI parse/lower/verify/profile examples
 - `api-stability.md`: Stable/Experimental/Internal API tiers and deprecation flow
+- `interoperability.md`: portable graph JSON, PyTorch/NumPy reference checks, de-lowering notes
 - `developer-guide.md`: dev environment, debugging path, contribution guidance
 - `versioning.md`: SemVer, MSRV, documentation versioning
 - `observability.md`: observability strategy

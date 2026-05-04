@@ -30,6 +30,7 @@
 | `eml_rs::opt::*` | 源级重写、代价模型 | 规则和 cost 权重会继续实验 |
 | `eml_rs::verify::*` | 数值对照工具 | 报告字段可扩展 |
 | `eml_rs::profiling::*` | compile/eval/verify 指标 | 指标字段可扩展 |
+| `eml_rs::portable::*` | portable graph JSON 导出 | schema v1 稳定，字段可扩展 |
 | `eml_rs::plugin::*` | pass/backend/observer 扩展点 | trait 可能补方法 |
 | `eml_rs::ffi::*` | Rust 侧 FFI 类型定义 | C ABI 以 `include/eml_rs.h` 为准 |
 
@@ -88,6 +89,7 @@ Experimental entries serve research workflows and may evolve faster. Pin the cra
 | `eml_rs::opt::*` | Source rewrites and cost model | Rules and weights are still experimental |
 | `eml_rs::verify::*` | Numerical comparison helpers | Report fields may expand |
 | `eml_rs::profiling::*` | Compile/eval/verify metrics | Metric fields may expand |
+| `eml_rs::portable::*` | Portable graph JSON export | Schema v1 is stable; fields may expand |
 | `eml_rs::plugin::*` | Pass/backend/observer extension points | Traits may gain methods |
 | `eml_rs::ffi::*` | Rust-side FFI type definitions | The C ABI is defined by `include/eml_rs.h` |
 
