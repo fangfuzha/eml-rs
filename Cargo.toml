@@ -26,3 +26,7 @@ libm = "0.2"
 [[bench]]
 name = "eval_bench"
 harness = false
+
+[[bench]]
+name = "parallel_bench"
+harness = false

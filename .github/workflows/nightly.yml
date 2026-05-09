@@ -13,6 +13,7 @@ on:
         options:
           - all
           - bench-only
+          - parallel-bench-only
           - quality-only
           - metrics-only
 
@@ -31,6 +32,7 @@ jobs:
     outputs:
       quality_required: ${{ steps.detect.outputs.quality_required }}
       bench_required: ${{ steps.detect.outputs.bench_required }}
+      parallel_bench_required: ${{ steps.detect.outputs.parallel_bench_required }}
       metrics_required: ${{ steps.detect.outputs.metrics_required }}
     steps:
       - uses: actions/checkout@v6
@@ -83,9 +85,11 @@ jobs:
             echo "quality_required=$1" >> "$GITHUB_OUTPUT"
             echo "bench_required=$2" >> "$GITHUB_OUTPUT"
             echo "metrics_required=$3" >> "$GITHUB_OUTPUT"
+            echo "parallel_bench_required=$4" >> "$GITHUB_OUTPUT"
             echo "quality_required=$1"
             echo "bench_required=$2"
             echo "metrics_required=$3"
+            echo "parallel_bench_required=$4"
           }
 
           matches_any() {
@@ -104,10 +108,11 @@ jobs:
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             case "$TARGET" in
-              bench-only) set_required false true false ;;
-              quality-only) set_required true false false ;;
-              metrics-only) set_required false false true ;;
-              *) set_required true true true ;;
+              bench-only) set_required false true false false ;;
+              parallel-bench-only) set_required false false false true ;;
+              quality-only) set_required true false false false ;;
+              metrics-only) set_required false false true false ;;
+              *) set_required true true true true ;;
             esac
             exit 0
           fi
@@ -126,13 +131,13 @@ jobs:
 
           if [[ -z "$previous_sha" ]]; then
             echo "No successful scheduled nightly run found; running all nightly jobs."
-            set_required true true true
+            set_required true true true false
             exit 0
           fi
 
           if [[ "$previous_sha" == "$current_sha" ]]; then
             echo "Current commit already had a successful scheduled nightly run."
-            set_required false false false
+            set_required false false false false
             exit 0
           fi
 
@@ -142,20 +147,21 @@ jobs:
 
           if ! git cat-file -e "${previous_sha}^{commit}" 2>/dev/null; then
             echo "Could not fetch previous successful nightly commit; running all nightly jobs."
-            set_required true true true
+            set_required true true true false
             exit 0
           fi
 
           mapfile -t changed_files < <(git diff --name-only "$previous_sha" "$current_sha")
           if [[ "${#changed_files[@]}" -eq 0 ]]; then
             echo "No changed files since previous successful scheduled nightly run."
-            set_required false false false
+            set_required false false false false
             exit 0
           fi
 
           quality_required=false
           bench_required=false
           metrics_required=false
+          parallel_bench_required=false
           echo "Changed files since $previous_sha:"
           for path in "${changed_files[@]}"; do
             echo "  $path"
@@ -164,7 +170,7 @@ jobs:
             matches_any "$path" "${metrics_patterns[@]}" && metrics_required=true
           done
 
-          set_required "$quality_required" "$bench_required" "$metrics_required"
+          set_required "$quality_required" "$bench_required" "$metrics_required" "$parallel_bench_required"
 
   nightly-quality:
     needs: changes
@@ -211,6 +217,20 @@ jobs:
         run: python3 scripts/bench_gate.py --criterion-dir target/criterion --config benchmarks/gate.json
       - name: Ensure release build for C ABI path
         run: cargo build --release -q
+
+  nightly-parallel-bench:
+    needs: changes
+    if: needs.changes.outputs.parallel_bench_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Run experimental parallel benchmarks
+        run: cargo bench --bench parallel_bench
 
   nightly-metrics:
     needs: changes
