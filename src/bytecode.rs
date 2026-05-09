@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use num_complex::Complex64;
 
-use crate::core::{eml_complex_with_policy, EvalPolicy};
+use crate::core::{eml_complex, eml_complex_with_policy, EvalPolicy};
 use crate::ir::Expr;
 use crate::EmlError;
 
@@ -35,6 +35,8 @@ pub struct BytecodeProgram {
     pub output: usize,
     /// Register file size.
     pub register_count: usize,
+    /// Minimum number of input variables required by the program.
+    pub required_arity: usize,
 }
 
 impl BytecodeProgram {
@@ -49,8 +51,10 @@ impl BytecodeProgram {
     pub fn from_expr_with_policy(expr: &Expr, policy: &EvalPolicy) -> Result<Self, EmlError> {
         let mut builder = Builder::new(policy);
         let output = builder.compile_cse(expr)?;
+        let instructions = builder.instructions;
         Ok(Self {
-            instructions: builder.instructions,
+            required_arity: Self::infer_required_arity(&instructions),
+            instructions,
             output,
             register_count: builder.next_reg.max(output + 1),
         })
@@ -95,6 +99,7 @@ impl BytecodeProgram {
 
         let output = walk(expr, &mut next_reg, &mut instructions);
         Self {
+            required_arity: Self::infer_required_arity(&instructions),
             instructions,
             output,
             register_count: next_reg.max(output + 1),
@@ -107,6 +112,7 @@ impl BytecodeProgram {
         vars: &[Complex64],
         policy: &EvalPolicy,
     ) -> Result<Complex64, EmlError> {
+        self.validate_arity(vars.len())?;
         let mut regs = self.new_register_file()?;
         self.eval_complex_with_registers(vars, policy, &mut regs)
     }
@@ -116,6 +122,36 @@ impl BytecodeProgram {
             return Err(EmlError::Unsupported("bytecode program has zero registers"));
         }
         Ok(vec![Complex64::new(0.0, 0.0); self.register_count])
+    }
+
+    fn validate_arity(&self, arity: usize) -> Result<(), EmlError> {
+        if arity >= self.required_arity {
+            return Ok(());
+        }
+
+        Err(self.missing_variable_error(arity))
+    }
+
+    fn missing_variable_error(&self, arity: usize) -> EmlError {
+        let missing_index = self
+            .instructions
+            .iter()
+            .find_map(|inst| match inst {
+                Instruction::LoadVar { index, .. } if *index >= arity => Some(*index),
+                _ => None,
+            })
+            .unwrap_or(arity);
+        EmlError::MissingVariable {
+            index: missing_index,
+            arity,
+        }
+    }
+
+    fn validate_batch_arities<T>(&self, samples: &[Vec<T>]) -> Result<(), EmlError> {
+        for vars in samples {
+            self.validate_arity(vars.len())?;
+        }
+        Ok(())
     }
 
     fn eval_complex_with_registers(
@@ -130,16 +166,37 @@ impl BytecodeProgram {
                     regs[*dst] = Complex64::new(1.0, 0.0);
                 }
                 Instruction::LoadVar { dst, index } => {
-                    regs[*dst] = vars.get(*index).copied().ok_or(EmlError::MissingVariable {
-                        index: *index,
-                        arity: vars.len(),
-                    })?;
+                    regs[*dst] = vars[*index];
                 }
                 Instruction::LoadConst { dst, value } => {
                     regs[*dst] = *value;
                 }
                 Instruction::Eml { dst, lhs, rhs } => {
                     regs[*dst] = eml_complex_with_policy(regs[*lhs], regs[*rhs], policy)?;
+                }
+            }
+        }
+        Ok(regs[self.output])
+    }
+
+    fn eval_complex_default_with_registers(
+        &self,
+        vars: &[Complex64],
+        regs: &mut [Complex64],
+    ) -> Result<Complex64, EmlError> {
+        for inst in &self.instructions {
+            match inst {
+                Instruction::LoadOne { dst } => {
+                    regs[*dst] = Complex64::new(1.0, 0.0);
+                }
+                Instruction::LoadVar { dst, index } => {
+                    regs[*dst] = vars[*index];
+                }
+                Instruction::LoadConst { dst, value } => {
+                    regs[*dst] = *value;
+                }
+                Instruction::Eml { dst, lhs, rhs } => {
+                    regs[*dst] = eml_complex(regs[*lhs], regs[*rhs])?;
                 }
             }
         }
@@ -159,10 +216,7 @@ impl BytecodeProgram {
                     regs[*dst] = Complex64::new(1.0, 0.0);
                 }
                 Instruction::LoadVar { dst, index } => {
-                    let value = vars.get(*index).copied().ok_or(EmlError::MissingVariable {
-                        index: *index,
-                        arity: vars.len(),
-                    })?;
+                    let value = vars[*index];
                     regs[*dst] = Complex64::new(value, 0.0);
                 }
                 Instruction::LoadConst { dst, value } => {
@@ -186,7 +240,9 @@ impl BytecodeProgram {
 
     /// Executes bytecode over complex inputs with default policy.
     pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
-        self.eval_complex_with_policy(vars, &EvalPolicy::default())
+        self.validate_arity(vars.len())?;
+        let mut regs = self.new_register_file()?;
+        self.eval_complex_default_with_registers(vars, &mut regs)
     }
 
     /// Executes bytecode over a complex batch while reusing one register file.
@@ -199,6 +255,7 @@ impl BytecodeProgram {
             return Ok(Vec::new());
         }
 
+        self.validate_batch_arities(samples)?;
         let mut regs = self.new_register_file()?;
         let mut out = Vec::with_capacity(samples.len());
         for vars in samples {
@@ -212,7 +269,17 @@ impl BytecodeProgram {
         &self,
         samples: &[Vec<Complex64>],
     ) -> Result<Vec<Complex64>, EmlError> {
-        self.eval_complex_batch_with_policy(samples, &EvalPolicy::default())
+        if samples.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        self.validate_batch_arities(samples)?;
+        let mut regs = self.new_register_file()?;
+        let mut out = Vec::with_capacity(samples.len());
+        for vars in samples {
+            out.push(self.eval_complex_default_with_registers(vars, &mut regs)?);
+        }
+        Ok(out)
     }
 
     /// Executes bytecode over real inputs with explicit policy.
@@ -222,6 +289,7 @@ impl BytecodeProgram {
         imag_tolerance: f64,
         policy: &EvalPolicy,
     ) -> Result<f64, EmlError> {
+        self.validate_arity(vars.len())?;
         let mut regs = self.new_register_file()?;
         self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)
     }
@@ -242,12 +310,24 @@ impl BytecodeProgram {
             return Ok(Vec::new());
         }
 
+        self.validate_batch_arities(samples)?;
         let mut regs = self.new_register_file()?;
         let mut out = Vec::with_capacity(samples.len());
         for vars in samples {
             out.push(self.eval_real_with_registers(vars, imag_tolerance, policy, &mut regs)?);
         }
         Ok(out)
+    }
+
+    fn infer_required_arity(instructions: &[Instruction]) -> usize {
+        instructions
+            .iter()
+            .filter_map(|inst| match inst {
+                Instruction::LoadVar { index, .. } => Some(index + 1),
+                _ => None,
+            })
+            .max()
+            .unwrap_or(0)
     }
 
     /// Executes bytecode over a real batch with default policy.
@@ -482,5 +562,17 @@ mod tests {
         let batch = prog.eval_real_batch(&samples, 1e-12).unwrap();
 
         assert_eq!(batch, scalar);
+    }
+
+    #[test]
+    fn missing_variable_error_is_reported_before_execution_loop() {
+        let expr = Expr::eml(Expr::var(1), Expr::var(0));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+
+        assert_eq!(prog.required_arity, 2);
+        assert_eq!(
+            prog.eval_complex(&[Complex64::new(0.2, 0.0)]),
+            Err(EmlError::MissingVariable { index: 1, arity: 1 })
+        );
     }
 }

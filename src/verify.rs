@@ -74,10 +74,11 @@ impl VerifyParallelism {
 
         let workers = self.workers.max(1).min(sample_count);
         let min_samples = self.min_samples_per_worker.max(1);
-        if workers <= 1 || sample_count < workers * min_samples {
+        let scaled_workers = workers.min((sample_count / min_samples).max(1));
+        if scaled_workers <= 1 {
             1
         } else {
-            workers
+            scaled_workers
         }
     }
 
@@ -92,7 +93,7 @@ impl Default for VerifyParallelism {
             workers: thread::available_parallelism()
                 .map(usize::from)
                 .unwrap_or(1),
-            min_samples_per_worker: 64,
+            min_samples_per_worker: 512,
         }
     }
 }
@@ -393,5 +394,19 @@ mod tests {
     fn auto_parallelism_never_returns_zero_workers() {
         let workers = VerifyParallelism::auto().effective_workers(8);
         assert!(workers >= 1);
+    }
+
+    #[test]
+    fn effective_workers_scales_down_with_small_batches() {
+        let parallelism = VerifyParallelism {
+            workers: 20,
+            min_samples_per_worker: 64,
+        };
+
+        assert_eq!(parallelism.effective_workers(32), 1);
+        assert_eq!(parallelism.effective_workers(64), 1);
+        assert_eq!(parallelism.effective_workers(128), 2);
+        assert_eq!(parallelism.effective_workers(256), 4);
+        assert_eq!(parallelism.effective_workers(1_024), 16);
     }
 }

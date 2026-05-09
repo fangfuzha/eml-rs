@@ -3,14 +3,19 @@ use std::time::Duration;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use eml_rs::api::{BuiltinBackend, PipelineBuilder};
 use eml_rs::bytecode::BytecodeProgram;
 use eml_rs::ir::{eval_rpn_complex, Expr};
 use eml_rs::lowering::{
     cross_entropy_template, eval_source_expr_complex, lower_to_eml, source_expr_node_count,
     SourceExpr,
 };
-use eml_rs::verify::verify_against_complex_ref;
+use eml_rs::verify::{verify_against_complex_ref, VerifyParallelism};
 use num_complex::Complex64;
+
+const SOFTMAX_CE_BATCH_SIZES: &[usize] = &[32, 256, 1_024, 4_096];
+const LOWER_VERIFY_TARGETS: &[(usize, &str)] = &[(1_000, "1k"), (10_000, "10k"), (100_000, "100k")];
+const PARALLEL_THRESHOLD_BATCH_SIZES: &[usize] = &[32, 64, 128, 256, 512, 1_024];
 
 fn positive_real_samples(n: usize, arity: usize) -> Vec<Vec<Complex64>> {
     (0..n)
@@ -121,8 +126,8 @@ fn build_softmax_ce_expr() -> Expr {
 }
 
 fn bench_softmax_ce_tree(c: &mut Criterion) {
-    for batch_size in [32, 256, 1_024] {
-        bench_softmax_ce_tree_batch(c, batch_size);
+    for batch_size in SOFTMAX_CE_BATCH_SIZES {
+        bench_softmax_ce_tree_batch(c, *batch_size);
     }
 }
 
@@ -141,8 +146,8 @@ fn bench_softmax_ce_tree_batch(c: &mut Criterion, batch_size: usize) {
 }
 
 fn bench_softmax_ce_bytecode(c: &mut Criterion) {
-    for batch_size in [32, 256, 1_024] {
-        bench_softmax_ce_bytecode_batch(c, batch_size);
+    for batch_size in SOFTMAX_CE_BATCH_SIZES {
+        bench_softmax_ce_bytecode_batch(c, *batch_size);
     }
 }
 
@@ -216,8 +221,85 @@ fn bench_lower_verify_nodes(c: &mut Criterion, target_nodes: usize, label: &str)
 }
 
 fn bench_lower_verify(c: &mut Criterion) {
-    bench_lower_verify_nodes(c, 1_000, "1k");
-    bench_lower_verify_nodes(c, 10_000, "10k");
+    for (target_nodes, label) in LOWER_VERIFY_TARGETS {
+        bench_lower_verify_nodes(c, *target_nodes, label);
+    }
+}
+
+fn parallel_threshold_pipeline() -> eml_rs::api::CompiledPipeline {
+    PipelineBuilder::new()
+        .compile_str("exp(x0) + exp(x1)")
+        .unwrap()
+}
+
+fn bench_parallel_threshold_tree(c: &mut Criterion) {
+    let pipeline = parallel_threshold_pipeline();
+    let parallelism = VerifyParallelism::auto();
+
+    for batch_size in PARALLEL_THRESHOLD_BATCH_SIZES {
+        let samples = positive_real_samples(*batch_size, 2);
+        let serial_name = format!("parallel_tree_serial_batch{batch_size}");
+        let auto_name = format!("parallel_tree_auto_batch{batch_size}");
+
+        c.bench_function(&serial_name, |b| {
+            b.iter(|| {
+                black_box(
+                    pipeline
+                        .eval_complex_batch(BuiltinBackend::Tree, black_box(&samples))
+                        .unwrap(),
+                );
+            })
+        });
+
+        c.bench_function(&auto_name, |b| {
+            b.iter(|| {
+                black_box(
+                    pipeline
+                        .eval_complex_batch_parallel(
+                            BuiltinBackend::Tree,
+                            black_box(&samples),
+                            parallelism,
+                        )
+                        .unwrap(),
+                );
+            })
+        });
+    }
+}
+
+fn bench_parallel_threshold_rpn(c: &mut Criterion) {
+    let pipeline = parallel_threshold_pipeline();
+    let parallelism = VerifyParallelism::auto();
+
+    for batch_size in PARALLEL_THRESHOLD_BATCH_SIZES {
+        let samples = positive_real_samples(*batch_size, 2);
+        let serial_name = format!("parallel_rpn_serial_batch{batch_size}");
+        let auto_name = format!("parallel_rpn_auto_batch{batch_size}");
+
+        c.bench_function(&serial_name, |b| {
+            b.iter(|| {
+                black_box(
+                    pipeline
+                        .eval_complex_batch(BuiltinBackend::Rpn, black_box(&samples))
+                        .unwrap(),
+                );
+            })
+        });
+
+        c.bench_function(&auto_name, |b| {
+            b.iter(|| {
+                black_box(
+                    pipeline
+                        .eval_complex_batch_parallel(
+                            BuiltinBackend::Rpn,
+                            black_box(&samples),
+                            parallelism,
+                        )
+                        .unwrap(),
+                );
+            })
+        });
+    }
 }
 
 criterion_group! {
@@ -235,6 +317,8 @@ criterion_group! {
         bench_native_ln,
         bench_softmax_ce_tree,
         bench_softmax_ce_bytecode,
-        bench_lower_verify
+        bench_lower_verify,
+        bench_parallel_threshold_tree,
+        bench_parallel_threshold_rpn
 }
 criterion_main!(benches);

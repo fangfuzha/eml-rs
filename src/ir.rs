@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 use num_complex::Complex64;
 
-use crate::core::{eml_complex_with_policy, EvalPolicy};
+use crate::core::{eml_complex, eml_complex_with_policy, EvalPolicy};
 use crate::EmlError;
 
 /// Expression tree for EML formulas.
@@ -105,7 +105,18 @@ impl Expr {
 
     /// Evaluates expression with default policy.
     pub fn eval_complex(&self, vars: &[Complex64]) -> Result<Complex64, EmlError> {
-        self.eval_complex_with_policy(vars, &EvalPolicy::default())
+        match self {
+            Expr::One => Ok(Complex64::new(1.0, 0.0)),
+            Expr::Var(index) => vars.get(*index).copied().ok_or(EmlError::MissingVariable {
+                index: *index,
+                arity: vars.len(),
+            }),
+            Expr::Eml(lhs, rhs) => {
+                let l = lhs.eval_complex(vars)?;
+                let r = rhs.eval_complex(vars)?;
+                eml_complex(l, r)
+            }
+        }
     }
 
     /// Evaluates expression over real inputs with explicit policy.
@@ -249,7 +260,28 @@ pub fn eval_rpn_complex_with_policy(
 
 /// Evaluates RPN tokens over complex variables with default policy.
 pub fn eval_rpn_complex(tokens: &[Token], vars: &[Complex64]) -> Result<Complex64, EmlError> {
-    eval_rpn_complex_with_policy(tokens, vars, &EvalPolicy::default())
+    let mut stack = Vec::<Complex64>::with_capacity(tokens.len());
+    for token in tokens {
+        match token {
+            Token::One => stack.push(Complex64::new(1.0, 0.0)),
+            Token::Var(index) => {
+                stack.push(vars.get(*index).copied().ok_or(EmlError::MissingVariable {
+                    index: *index,
+                    arity: vars.len(),
+                })?)
+            }
+            Token::Eml => {
+                let rhs = stack.pop().ok_or(EmlError::StackUnderflow)?;
+                let lhs = stack.pop().ok_or(EmlError::StackUnderflow)?;
+                stack.push(eml_complex(lhs, rhs)?);
+            }
+        }
+    }
+
+    if stack.len() != 1 {
+        return Err(EmlError::StackNotSingleton { len: stack.len() });
+    }
+    Ok(stack[0])
 }
 
 /// Evaluates RPN tokens over real inputs with explicit policy.
@@ -297,5 +329,23 @@ mod tests {
         let stats = expr.stats();
         assert!(stats.shared_subexpressions > 0);
         assert!(stats.unique_subexpressions < stats.nodes);
+    }
+
+    #[test]
+    fn default_paths_match_explicit_default_policy() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::ln(Expr::var(1)));
+        let tokens = expr.to_rpn_vec();
+        let vars = vec![Complex64::new(0.3, -0.1), Complex64::new(1.8, 0.2)];
+        let default_policy = EvalPolicy::default();
+
+        assert_eq!(
+            expr.eval_complex(&vars).unwrap(),
+            expr.eval_complex_with_policy(&vars, &default_policy)
+                .unwrap()
+        );
+        assert_eq!(
+            eval_rpn_complex(&tokens, &vars).unwrap(),
+            eval_rpn_complex_with_policy(&tokens, &vars, &default_policy).unwrap()
+        );
     }
 }

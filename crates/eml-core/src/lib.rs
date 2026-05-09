@@ -141,7 +141,23 @@ pub fn eml_complex_with_policy(
 
 /// Default complex EML with strict finite checks and principal branch.
 pub fn eml_complex(x: Complex64, y: Complex64) -> Result<Complex64, EmlCoreError> {
-    eml_complex_with_policy(x, y, &EvalPolicy::default())
+    if !is_finite_complex(x) {
+        return Err(EmlCoreError::NonFiniteInput("x is not finite"));
+    }
+    if !is_finite_complex(y) {
+        return Err(EmlCoreError::NonFiniteInput("y is not finite"));
+    }
+    if y == Complex64::new(0.0, 0.0) {
+        return Err(EmlCoreError::Domain("log(0) is undefined"));
+    }
+
+    let out = x.exp() - y.ln();
+    if !is_finite_complex(out) {
+        return Err(EmlCoreError::NonFiniteOutput(
+            "eml_complex produced non-finite value",
+        ));
+    }
+    Ok(out)
 }
 
 /// Evaluates real `eml(x, y) = exp(x) - ln(y)` with policy.
@@ -209,5 +225,16 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, EmlCoreError::NonFiniteInput(_)));
+    }
+
+    #[test]
+    fn default_complex_path_matches_default_policy() {
+        let x = Complex64::new(0.7, -0.2);
+        let y = Complex64::new(1.9, 0.3);
+
+        assert_eq!(
+            eml_complex(x, y).unwrap(),
+            eml_complex_with_policy(x, y, &EvalPolicy::default()).unwrap()
+        );
     }
 }
