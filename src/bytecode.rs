@@ -6,11 +6,13 @@
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::thread;
 
 use num_complex::Complex64;
 
 use crate::core::{eml_complex, eml_complex_with_policy, EvalPolicy};
 use crate::ir::Expr;
+use crate::verify::VerifyParallelism;
 use crate::EmlError;
 
 /// Single bytecode instruction.
@@ -264,6 +266,36 @@ impl BytecodeProgram {
         Ok(out)
     }
 
+    /// Executes bytecode over a complex batch in parallel across sample chunks.
+    pub fn eval_complex_batch_parallel_with_policy(
+        &self,
+        samples: &[Vec<Complex64>],
+        policy: &EvalPolicy,
+        parallelism: VerifyParallelism,
+    ) -> Result<Vec<Complex64>, EmlError> {
+        let workers = parallelism.effective_workers(samples.len());
+        if workers <= 1 {
+            return self.eval_complex_batch_with_policy(samples, policy);
+        }
+
+        let chunk_size = samples.len().div_ceil(workers);
+        thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            for chunk in samples.chunks(chunk_size) {
+                handles.push(scope.spawn(move || self.eval_complex_batch_with_policy(chunk, policy)));
+            }
+
+            let mut out = Vec::with_capacity(samples.len());
+            for handle in handles {
+                let chunk = handle
+                    .join()
+                    .expect("bytecode complex batch worker unexpectedly panicked")?;
+                out.extend(chunk);
+            }
+            Ok(out)
+        })
+    }
+
     /// Executes bytecode over a complex batch with default policy.
     pub fn eval_complex_batch(
         &self,
@@ -280,6 +312,15 @@ impl BytecodeProgram {
             out.push(self.eval_complex_default_with_registers(vars, &mut regs)?);
         }
         Ok(out)
+    }
+
+    /// Executes bytecode over a complex batch in parallel with default policy.
+    pub fn eval_complex_batch_parallel(
+        &self,
+        samples: &[Vec<Complex64>],
+        parallelism: VerifyParallelism,
+    ) -> Result<Vec<Complex64>, EmlError> {
+        self.eval_complex_batch_parallel_with_policy(samples, &EvalPolicy::default(), parallelism)
     }
 
     /// Executes bytecode over real inputs with explicit policy.
@@ -319,6 +360,39 @@ impl BytecodeProgram {
         Ok(out)
     }
 
+    /// Executes bytecode over a real batch in parallel across sample chunks.
+    pub fn eval_real_batch_parallel_with_policy(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+        policy: &EvalPolicy,
+        parallelism: VerifyParallelism,
+    ) -> Result<Vec<f64>, EmlError> {
+        let workers = parallelism.effective_workers(samples.len());
+        if workers <= 1 {
+            return self.eval_real_batch_with_policy(samples, imag_tolerance, policy);
+        }
+
+        let chunk_size = samples.len().div_ceil(workers);
+        thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            for chunk in samples.chunks(chunk_size) {
+                handles.push(scope.spawn(move || {
+                    self.eval_real_batch_with_policy(chunk, imag_tolerance, policy)
+                }));
+            }
+
+            let mut out = Vec::with_capacity(samples.len());
+            for handle in handles {
+                let chunk = handle
+                    .join()
+                    .expect("bytecode real batch worker unexpectedly panicked")?;
+                out.extend(chunk);
+            }
+            Ok(out)
+        })
+    }
+
     fn infer_required_arity(instructions: &[Instruction]) -> usize {
         instructions
             .iter()
@@ -337,6 +411,21 @@ impl BytecodeProgram {
         imag_tolerance: f64,
     ) -> Result<Vec<f64>, EmlError> {
         self.eval_real_batch_with_policy(samples, imag_tolerance, &EvalPolicy::default())
+    }
+
+    /// Executes bytecode over a real batch in parallel with default policy.
+    pub fn eval_real_batch_parallel(
+        &self,
+        samples: &[Vec<f64>],
+        imag_tolerance: f64,
+        parallelism: VerifyParallelism,
+    ) -> Result<Vec<f64>, EmlError> {
+        self.eval_real_batch_parallel_with_policy(
+            samples,
+            imag_tolerance,
+            &EvalPolicy::default(),
+            parallelism,
+        )
     }
 }
 
@@ -562,6 +651,50 @@ mod tests {
         let batch = prog.eval_real_batch(&samples, 1e-12).unwrap();
 
         assert_eq!(batch, scalar);
+    }
+
+    #[test]
+    fn complex_parallel_batch_eval_matches_serial_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![
+            vec![Complex64::new(0.1, 0.0), Complex64::new(0.2, 0.0)],
+            vec![Complex64::new(0.3, 0.0), Complex64::new(0.4, 0.0)],
+            vec![Complex64::new(0.5, 0.0), Complex64::new(0.6, 0.0)],
+            vec![Complex64::new(0.7, 0.0), Complex64::new(0.8, 0.0)],
+        ];
+        let parallelism = VerifyParallelism {
+            workers: 4,
+            min_samples_per_worker: 1,
+        };
+
+        let serial = prog.eval_complex_batch(&samples).unwrap();
+        let parallel = prog.eval_complex_batch_parallel(&samples, parallelism).unwrap();
+
+        assert_eq!(parallel, serial);
+    }
+
+    #[test]
+    fn real_parallel_batch_eval_matches_serial_bytecode() {
+        let expr = Expr::eml(Expr::exp(Expr::var(0)), Expr::exp(Expr::var(1)));
+        let prog = BytecodeProgram::from_expr(&expr).unwrap();
+        let samples = vec![
+            vec![0.1, 0.2],
+            vec![0.3, 0.4],
+            vec![0.5, 0.6],
+            vec![0.7, 0.8],
+        ];
+        let parallelism = VerifyParallelism {
+            workers: 4,
+            min_samples_per_worker: 1,
+        };
+
+        let serial = prog.eval_real_batch(&samples, 1e-12).unwrap();
+        let parallel = prog
+            .eval_real_batch_parallel(&samples, 1e-12, parallelism)
+            .unwrap();
+
+        assert_eq!(parallel, serial);
     }
 
     #[test]

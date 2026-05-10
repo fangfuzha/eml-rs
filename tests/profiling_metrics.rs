@@ -119,3 +119,52 @@ fn profiled_parallel_eval_records_worker_count() {
     assert!(metrics.parallel);
     assert_eq!(metrics.workers, 4);
 }
+
+#[test]
+fn profiled_parallel_bytecode_eval_records_worker_count() {
+    let profiled = PipelineBuilder::new()
+        .compile_str_profiled("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap();
+    let samples = vec![
+        vec![
+            Complex64::new(0.2, 0.0),
+            Complex64::new(0.4, 0.0),
+            Complex64::new(0.6, 0.0),
+            Complex64::new(0.8, 0.0),
+        ],
+        vec![
+            Complex64::new(0.3, 0.0),
+            Complex64::new(0.5, 0.0),
+            Complex64::new(0.7, 0.0),
+            Complex64::new(0.9, 0.0),
+        ],
+        vec![
+            Complex64::new(0.4, 0.0),
+            Complex64::new(0.6, 0.0),
+            Complex64::new(0.8, 0.0),
+            Complex64::new(1.0, 0.0),
+        ],
+        vec![
+            Complex64::new(0.5, 0.0),
+            Complex64::new(0.7, 0.0),
+            Complex64::new(0.9, 0.0),
+            Complex64::new(1.1, 0.0),
+        ],
+    ];
+
+    let metrics = profiled
+        .pipeline
+        .profile_eval_complex_batch_parallel(
+            BuiltinBackend::Bytecode,
+            &samples,
+            VerifyParallelism {
+                workers: 4,
+                min_samples_per_worker: 1,
+            },
+        )
+        .unwrap();
+    assert_eq!(metrics.backend, BuiltinBackend::Bytecode);
+    assert_eq!(metrics.samples, samples.len());
+    assert!(metrics.parallel);
+    assert_eq!(metrics.workers, 4);
+}

@@ -1,13 +1,9 @@
 use std::hint::black_box;
-use std::thread;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use eml_rs::api::{BuiltinBackend, PipelineBuilder};
-use eml_rs::bytecode::BytecodeProgram;
-use eml_rs::lowering::{cross_entropy_template, lower_to_eml, SourceExpr};
 use eml_rs::verify::VerifyParallelism;
-use eml_rs::EmlError;
 use num_complex::Complex64;
 
 const PARALLEL_THRESHOLD_BATCH_SIZES: &[usize] = &[32, 64, 128, 256, 512, 1_024];
@@ -32,44 +28,10 @@ fn parallel_threshold_pipeline() -> eml_rs::api::CompiledPipeline {
         .unwrap()
 }
 
-fn build_softmax_ce_bytecode() -> BytecodeProgram {
-    let logits = vec![
-        SourceExpr::var(0),
-        SourceExpr::var(1),
-        SourceExpr::var(2),
-        SourceExpr::var(3),
-    ];
-    let ce = cross_entropy_template(&logits, 2).unwrap();
-    let expr = lower_to_eml(&ce).unwrap();
-    BytecodeProgram::from_expr(&expr).unwrap()
-}
-
-fn eval_bytecode_batch_parallel(
-    program: &BytecodeProgram,
-    samples: &[Vec<Complex64>],
-    parallelism: VerifyParallelism,
-) -> Result<Vec<Complex64>, EmlError> {
-    let workers = parallelism.effective_workers(samples.len());
-    if workers <= 1 {
-        return program.eval_complex_batch(samples);
-    }
-
-    let chunk_size = samples.len().div_ceil(workers);
-    thread::scope(|scope| {
-        let mut handles = Vec::with_capacity(workers);
-        for chunk in samples.chunks(chunk_size) {
-            handles.push(scope.spawn(move || program.eval_complex_batch(chunk)));
-        }
-
-        let mut out = Vec::with_capacity(samples.len());
-        for handle in handles {
-            let chunk = handle
-                .join()
-                .expect("bytecode batch worker unexpectedly panicked")?;
-            out.extend(chunk);
-        }
-        Ok(out)
-    })
+fn bytecode_parallel_pipeline() -> eml_rs::api::CompiledPipeline {
+    PipelineBuilder::new()
+    .compile_str("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap()
 }
 
 fn bench_parallel_threshold_tree(c: &mut Criterion) {
@@ -143,7 +105,7 @@ fn bench_parallel_threshold_rpn(c: &mut Criterion) {
 }
 
 fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
-    let program = build_softmax_ce_bytecode();
+    let pipeline = bytecode_parallel_pipeline();
     let parallelism = VerifyParallelism::auto();
 
     for batch_size in BYTECODE_PARALLEL_BATCH_SIZES {
@@ -153,19 +115,24 @@ fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
 
         c.bench_function(&serial_name, |b| {
             b.iter(|| {
-                black_box(program.eval_complex_batch(black_box(&samples)).unwrap());
+                black_box(
+                    pipeline
+                        .eval_complex_batch(BuiltinBackend::Bytecode, black_box(&samples))
+                        .unwrap(),
+                );
             })
         });
 
         c.bench_function(&auto_name, |b| {
             b.iter(|| {
                 black_box(
-                    eval_bytecode_batch_parallel(
-                        black_box(&program),
-                        black_box(&samples),
-                        parallelism,
-                    )
-                    .unwrap(),
+                    pipeline
+                        .eval_complex_batch_parallel(
+                            BuiltinBackend::Bytecode,
+                            black_box(&samples),
+                            parallelism,
+                        )
+                        .unwrap(),
                 );
             })
         });

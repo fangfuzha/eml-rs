@@ -62,20 +62,43 @@ fn parallel_real_batch_eval_matches_serial_rpn() {
 }
 
 #[test]
-fn parallel_batch_eval_rejects_bytecode_backend() {
-    let pipeline = PipelineBuilder::new().compile_str("exp(x0)").unwrap();
-    let samples = complex_samples(8);
+fn parallel_complex_batch_eval_matches_serial_bytecode() {
+    let pipeline = PipelineBuilder::new()
+        .compile_str("exp(x0) + exp(x1)")
+        .unwrap();
+    let samples = complex_samples(256);
+    let parallelism = VerifyParallelism {
+        workers: 4,
+        min_samples_per_worker: 1,
+    };
 
-    let err = pipeline
-        .eval_complex_batch_parallel(
-            BuiltinBackend::Bytecode,
-            &samples,
-            VerifyParallelism::auto(),
-        )
-        .unwrap_err();
+    let serial = pipeline
+        .eval_complex_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+    let parallel = pipeline
+        .eval_complex_batch_parallel(BuiltinBackend::Bytecode, &samples, parallelism)
+        .unwrap();
 
-    assert!(
-        err.to_string().contains("Tree/Rpn"),
-        "unexpected error: {err}"
-    );
+    assert_eq!(parallel, serial);
+}
+
+#[test]
+fn parallel_real_batch_eval_matches_serial_bytecode() {
+    let pipeline = PipelineBuilder::new()
+        .compile_str("exp(x0) + exp(x1)")
+        .unwrap();
+    let samples = real_samples(256);
+    let parallelism = VerifyParallelism {
+        workers: 4,
+        min_samples_per_worker: 1,
+    };
+
+    let serial = pipeline
+        .eval_real_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+    let parallel = pipeline
+        .eval_real_batch_parallel(BuiltinBackend::Bytecode, &samples, parallelism)
+        .unwrap();
+
+    assert_eq!(parallel, serial);
 }

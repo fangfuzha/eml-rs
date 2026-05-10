@@ -147,10 +147,7 @@ pub struct CompiledPipeline {
 impl CompiledPipeline {
     fn parallel_eval_supported(backend: BuiltinBackend) -> EmlResult<()> {
         match backend {
-            BuiltinBackend::Tree | BuiltinBackend::Rpn => Ok(()),
-            BuiltinBackend::Bytecode => Err(EmlError::Unsupported(
-                "parallel batch evaluation currently supports only Tree/Rpn backends",
-            )),
+            BuiltinBackend::Tree | BuiltinBackend::Rpn | BuiltinBackend::Bytecode => Ok(()),
         }
     }
 
@@ -282,7 +279,7 @@ impl CompiledPipeline {
 
     /// Evaluates complex samples in parallel across independent chunks.
     ///
-    /// Only `Tree` and `Rpn` are supported in parallel mode for now.
+    /// `Tree`, `Rpn`, and `Bytecode` are supported in parallel mode.
     pub fn eval_complex_batch_parallel(
         &self,
         backend: BuiltinBackend,
@@ -290,6 +287,14 @@ impl CompiledPipeline {
         parallelism: VerifyParallelism,
     ) -> EmlResult<Vec<Complex64>> {
         Self::parallel_eval_supported(backend)?;
+        if backend == BuiltinBackend::Bytecode {
+            return self
+                .bytecode
+                .as_ref()
+                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
+                .eval_complex_batch_parallel_with_policy(samples, &self.eval_policy, parallelism);
+        }
+
         let workers = parallelism.effective_workers(samples.len());
         if workers <= 1 {
             return self.eval_complex_batch(backend, samples);
@@ -320,7 +325,7 @@ impl CompiledPipeline {
 
     /// Evaluates real samples in parallel across independent chunks.
     ///
-    /// Only `Tree` and `Rpn` are supported in parallel mode for now.
+    /// `Tree`, `Rpn`, and `Bytecode` are supported in parallel mode.
     pub fn eval_real_batch_parallel(
         &self,
         backend: BuiltinBackend,
@@ -328,6 +333,19 @@ impl CompiledPipeline {
         parallelism: VerifyParallelism,
     ) -> EmlResult<Vec<f64>> {
         Self::parallel_eval_supported(backend)?;
+        if backend == BuiltinBackend::Bytecode {
+            return self
+                .bytecode
+                .as_ref()
+                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
+                .eval_real_batch_parallel_with_policy(
+                    samples,
+                    self.imag_tolerance,
+                    &self.eval_policy,
+                    parallelism,
+                );
+        }
+
         let workers = parallelism.effective_workers(samples.len());
         if workers <= 1 {
             return self.eval_real_batch(backend, samples);
