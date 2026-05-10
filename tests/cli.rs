@@ -89,3 +89,58 @@ fn cli_verify_and_profile_commands_run() {
     assert!(stdout.contains("eval_parallel="));
     assert!(stdout.contains("eval_workers="));
 }
+
+#[test]
+fn cli_profile_bytecode_parallel_flags_work() {
+    let profile_off = Command::new(eml_bin())
+        .args([
+            "profile",
+            "exp(x0) + exp(x1) + exp(x2) + exp(x3)",
+            "--sample-count",
+            "1024",
+            "--bytecode-parallel",
+            "off",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        profile_off.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&profile_off.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&profile_off.stdout);
+    let bytecode_line = stdout
+        .lines()
+        .find(|line| line.contains("eval_backend=bytecode"))
+        .unwrap();
+    assert!(bytecode_line.contains("eval_parallel=false"));
+    assert!(bytecode_line.contains("eval_workers=1"));
+
+    let profile_force = Command::new(eml_bin())
+        .args([
+            "profile",
+            "exp(x0) + exp(x1) + exp(x2) + exp(x3)",
+            "--sample-count",
+            "4",
+            "--bytecode-parallel",
+            "force",
+            "--bytecode-workers",
+            "4",
+            "--bytecode-min-samples-per-worker",
+            "1",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        profile_force.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&profile_force.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&profile_force.stdout);
+    let bytecode_line = stdout
+        .lines()
+        .find(|line| line.contains("eval_backend=bytecode"))
+        .unwrap();
+    assert!(bytecode_line.contains("eval_parallel=true"));
+    assert!(bytecode_line.contains("eval_workers=4"));
+}

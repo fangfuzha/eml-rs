@@ -2,20 +2,23 @@ use std::env;
 use std::fs;
 use std::process;
 
-use eml_rs::api::{BuiltinBackend, PipelineBuilder, PipelineOptions};
+use eml_rs::api::{
+    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
+};
 use eml_rs::core::EvalPolicy;
 use eml_rs::lowering::{
     eval_source_expr_complex, lower_to_eml, parse_source_expr, source_expr_node_count, SourceExpr,
 };
 use eml_rs::opt::optimize_for_lowering;
+use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
 fn usage() -> &'static str {
     "用法:
   eml parse <expr>
   eml lower <expr>
-  eml verify <expr> --samples <samples.json> [--tolerance <f64>] [--relaxed]
-  eml profile <expr> [--samples <samples.json>] [--sample-count <usize>] [--relaxed]
+    eml verify <expr> --samples <samples.json> [--tolerance <f64>] [--relaxed] [--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] [--bytecode-min-samples-per-worker <usize>]
+    eml profile <expr> [--samples <samples.json>] [--sample-count <usize>] [--relaxed] [--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] [--bytecode-min-samples-per-worker <usize>]
 
 样本 JSON 格式: [[0.2, 1.4], [0.5, 2.0]]
 表达式如果包含空格，请用引号包住。"
@@ -44,7 +47,58 @@ fn pipeline_builder(args: &[String]) -> Result<PipelineBuilder, String> {
     if relaxed {
         options.eval_policy = EvalPolicy::relaxed();
     }
+    options.bytecode_batch_parallelism = parse_bytecode_batch_parallelism(args)?;
     Ok(PipelineBuilder::new().with_options(options))
+}
+
+fn parse_usize_arg(args: &[String], flag: &str) -> Result<Option<usize>, String> {
+    arg_value(args, flag)
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .map_err(|err| format!("invalid {flag}: {err}"))
+        })
+        .transpose()
+}
+
+fn parse_bytecode_batch_parallelism(
+    args: &[String],
+) -> Result<BytecodeBatchParallelism, String> {
+    let mode = arg_value(args, "--bytecode-parallel").unwrap_or_else(|| "auto".to_string());
+    let workers = parse_usize_arg(args, "--bytecode-workers")?;
+    let min_samples = parse_usize_arg(args, "--bytecode-min-samples-per-worker")?;
+
+    match mode.as_str() {
+        "off" => {
+            if workers.is_some() || min_samples.is_some() {
+                return Err(
+                    "--bytecode-workers and --bytecode-min-samples-per-worker require --bytecode-parallel force"
+                        .to_string(),
+                );
+            }
+            Ok(BytecodeBatchParallelism::Disabled)
+        }
+        "auto" => {
+            if workers.is_some() || min_samples.is_some() {
+                return Err(
+                    "--bytecode-workers and --bytecode-min-samples-per-worker require --bytecode-parallel force"
+                        .to_string(),
+                );
+            }
+            Ok(BytecodeBatchParallelism::Auto)
+        }
+        "force" => Ok(BytecodeBatchParallelism::Force(VerifyParallelism {
+            workers: workers.unwrap_or_else(|| {
+                std::thread::available_parallelism()
+                    .map(usize::from)
+                    .unwrap_or(1)
+            }),
+            min_samples_per_worker: min_samples.unwrap_or(1),
+        })),
+        other => Err(format!(
+            "invalid --bytecode-parallel value '{other}', expected off|auto|force"
+        )),
+    }
 }
 
 fn read_real_samples(path: &str) -> Result<Vec<Vec<f64>>, String> {

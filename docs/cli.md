@@ -4,6 +4,11 @@
 
 `eml` CLI 是研究实验入口，不替代库 API。它用于快速检查一条表达式在 `parse -> optimize -> lower -> compile -> verify/profile` 流程中的结构、统计与数值行为。
 
+与 Bytecode 批量执行相关的实验可以通过 `--bytecode-parallel` 控制：
+- `off`: 禁用默认样本级并行。
+- `auto`: 使用库内默认阈值策略。
+- `force`: 强制启用样本级并行；可选 `--bytecode-workers` 与 `--bytecode-min-samples-per-worker`。
+
 ### 构建
 
 ```bash
@@ -19,6 +24,7 @@ cargo run --bin eml -- parse "exp(x0) - log(x1)"
 ```
 
 输出包含：
+
 - `SourceExpr`: 解析后的源 AST。
 - `source_nodes`: 源表达式节点数。
 
@@ -31,6 +37,7 @@ cargo run --bin eml -- lower "softplus(x0) + sigmoid(x0)"
 ```
 
 输出包含：
+
 - `Expr`: 降级后的 EML IR。
 - `ExprStats`: 节点数、深度、公共子树统计。
 - `source_nodes` / `optimized_source_nodes`: lowering 前后的源表达式规模。
@@ -46,6 +53,7 @@ cargo run --bin eml -- verify "mish(x0)" --samples /tmp/eml-samples.json --relax
 ```
 
 输出包含：
+
 - `backend=tree|rpn|bytecode`: 每个后端的独立验证报告。
 - `passed=true|false`: 三个后端是否全部通过。
 - `max_abs_error`: 当前后端相对参考表达式的最大绝对误差。
@@ -58,9 +66,12 @@ cargo run --bin eml -- verify "mish(x0)" --samples /tmp/eml-samples.json --relax
 cargo run --bin eml -- profile "exp(x0) - log(x1)" --sample-count 32
 cargo run --bin eml -- profile "exp(x0) - log(x1)" --samples /tmp/eml-samples.json
 cargo run --bin eml -- profile "softplus(x0) + mish(x0)" --relaxed
+cargo run --bin eml -- profile "exp(x0) + exp(x1) + exp(x2) + exp(x3)" --sample-count 1024 --bytecode-parallel off
+cargo run --bin eml -- profile "exp(x0) + exp(x1) + exp(x2) + exp(x3)" --sample-count 4 --bytecode-parallel force --bytecode-workers 4 --bytecode-min-samples-per-worker 1
 ```
 
 输出包含：
+
 - `parse_ms` / `simplify_ms` / `lowering_ms` / `rpn_build_ms` / `bytecode_build_ms`。
 - `eval_backend=tree|rpn|bytecode`。
 - `eval_total_ms` / `eval_per_sample_us` / `eval_samples`。
@@ -69,6 +80,11 @@ cargo run --bin eml -- profile "softplus(x0) + mish(x0)" --relaxed
 ## English
 
 The `eml` CLI is a research-time entry point, not a replacement for the Rust API. It helps inspect one expression through `parse -> optimize -> lower -> compile -> verify/profile`.
+
+Bytecode batch experiments can be controlled with `--bytecode-parallel`:
+- `off`: disable the default sample-level parallel path.
+- `auto`: use the library default threshold policy.
+- `force`: force sample-level parallel execution; optionally combine with `--bytecode-workers` and `--bytecode-min-samples-per-worker`.
 
 ### Build
 
@@ -85,6 +101,7 @@ cargo run --bin eml -- parse "exp(x0) - log(x1)"
 ```
 
 The output includes:
+
 - `SourceExpr`: parsed source AST.
 - `source_nodes`: source expression node count.
 
@@ -97,6 +114,7 @@ cargo run --bin eml -- lower "softplus(x0) + sigmoid(x0)"
 ```
 
 The output includes:
+
 - `Expr`: lowered EML IR.
 - `ExprStats`: node count, depth, and subtree statistics.
 - `source_nodes` / `optimized_source_nodes`: source size before and after optimization.
@@ -112,6 +130,7 @@ cargo run --bin eml -- verify "mish(x0)" --samples /tmp/eml-samples.json --relax
 ```
 
 The output includes:
+
 - `backend=tree|rpn|bytecode`: per-backend verification report.
 - `passed=true|false`: whether all three backends passed.
 - `max_abs_error`: maximum absolute error against the source reference.
@@ -124,9 +143,12 @@ Print compile-stage timings and batch eval timings for Tree, RPN, and Bytecode. 
 cargo run --bin eml -- profile "exp(x0) - log(x1)" --sample-count 32
 cargo run --bin eml -- profile "exp(x0) - log(x1)" --samples /tmp/eml-samples.json
 cargo run --bin eml -- profile "softplus(x0) + mish(x0)" --relaxed
+cargo run --bin eml -- profile "exp(x0) + exp(x1) + exp(x2) + exp(x3)" --sample-count 1024 --bytecode-parallel off
+cargo run --bin eml -- profile "exp(x0) + exp(x1) + exp(x2) + exp(x3)" --sample-count 4 --bytecode-parallel force --bytecode-workers 4 --bytecode-min-samples-per-worker 1
 ```
 
 The output includes:
+
 - `parse_ms` / `simplify_ms` / `lowering_ms` / `rpn_build_ms` / `bytecode_build_ms`.
 - `eval_backend=tree|rpn|bytecode`.
 - `eval_total_ms` / `eval_per_sample_us` / `eval_samples`.

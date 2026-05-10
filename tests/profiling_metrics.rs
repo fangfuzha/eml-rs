@@ -1,4 +1,6 @@
-use eml_rs::api::{BuiltinBackend, PipelineBuilder, PipelineOptions};
+use eml_rs::api::{
+    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
+};
 use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
@@ -196,4 +198,88 @@ fn profiled_default_bytecode_batch_eval_records_auto_worker_count() {
     assert_eq!(metrics.samples, samples.len());
     assert_eq!(metrics.workers, expected_workers);
     assert_eq!(metrics.parallel, expected_workers > 1);
+}
+
+#[test]
+fn profiled_disabled_bytecode_batch_eval_records_serial_worker_count() {
+    let options = PipelineOptions {
+        bytecode_batch_parallelism: BytecodeBatchParallelism::Disabled,
+        ..PipelineOptions::default()
+    };
+    let profiled = PipelineBuilder::new()
+        .with_options(options)
+        .compile_str_profiled("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap();
+    let samples = (0..1_024)
+        .map(|i| {
+            let base = 0.1 + (i as f64) * 0.001;
+            vec![
+                Complex64::new(base, 0.0),
+                Complex64::new(base + 0.1, 0.0),
+                Complex64::new(base + 0.2, 0.0),
+                Complex64::new(base + 0.3, 0.0),
+            ]
+        })
+        .collect::<Vec<_>>();
+
+    let metrics = profiled
+        .pipeline
+        .profile_eval_complex_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+
+    assert_eq!(metrics.backend, BuiltinBackend::Bytecode);
+    assert_eq!(metrics.samples, samples.len());
+    assert!(!metrics.parallel);
+    assert_eq!(metrics.workers, 1);
+}
+
+#[test]
+fn profiled_forced_bytecode_batch_eval_records_forced_worker_count() {
+    let options = PipelineOptions {
+        bytecode_batch_parallelism: BytecodeBatchParallelism::Force(VerifyParallelism {
+            workers: 4,
+            min_samples_per_worker: 1,
+        }),
+        ..PipelineOptions::default()
+    };
+    let profiled = PipelineBuilder::new()
+        .with_options(options)
+        .compile_str_profiled("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap();
+    let samples = vec![
+        vec![
+            Complex64::new(0.2, 0.0),
+            Complex64::new(0.4, 0.0),
+            Complex64::new(0.6, 0.0),
+            Complex64::new(0.8, 0.0),
+        ],
+        vec![
+            Complex64::new(0.3, 0.0),
+            Complex64::new(0.5, 0.0),
+            Complex64::new(0.7, 0.0),
+            Complex64::new(0.9, 0.0),
+        ],
+        vec![
+            Complex64::new(0.4, 0.0),
+            Complex64::new(0.6, 0.0),
+            Complex64::new(0.8, 0.0),
+            Complex64::new(1.0, 0.0),
+        ],
+        vec![
+            Complex64::new(0.5, 0.0),
+            Complex64::new(0.7, 0.0),
+            Complex64::new(0.9, 0.0),
+            Complex64::new(1.1, 0.0),
+        ],
+    ];
+
+    let metrics = profiled
+        .pipeline
+        .profile_eval_complex_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+
+    assert_eq!(metrics.backend, BuiltinBackend::Bytecode);
+    assert_eq!(metrics.samples, samples.len());
+    assert!(metrics.parallel);
+    assert_eq!(metrics.workers, 4);
 }

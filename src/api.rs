@@ -49,6 +49,36 @@ pub enum BuiltinBackend {
     Bytecode,
 }
 
+/// Bytecode backend sample-level batch parallelism policy.
+///
+/// This controls only the default batch helpers such as
+/// [`CompiledPipeline::eval_complex_batch`] and
+/// [`CompiledPipeline::eval_real_batch`]. Explicit `*_parallel` helpers still
+/// use the [`VerifyParallelism`] passed by the caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BytecodeBatchParallelism {
+    /// Always run Bytecode batch execution serially.
+    Disabled,
+    /// Choose workers from [`VerifyParallelism::auto`].
+    #[default]
+    Auto,
+    /// Force sample-level parallel execution with the provided settings.
+    Force(VerifyParallelism),
+}
+
+impl BytecodeBatchParallelism {
+    /// Forces Bytecode batch execution to use all available workers with a
+    /// per-worker minimum of one sample.
+    pub fn force_default() -> Self {
+        Self::Force(VerifyParallelism {
+            workers: thread::available_parallelism()
+                .map(usize::from)
+                .unwrap_or(1),
+            min_samples_per_worker: 1,
+        })
+    }
+}
+
 /// 高层编译流程的配置项。
 ///
 /// # 示例
@@ -81,6 +111,8 @@ pub struct PipelineOptions {
     pub eval_policy: EvalPolicy,
     /// Tolerance used by real-valued evaluation helpers.
     pub imag_tolerance: f64,
+    /// Default sample-level parallelism strategy for Bytecode batch helpers.
+    pub bytecode_batch_parallelism: BytecodeBatchParallelism,
 }
 
 impl Default for PipelineOptions {
@@ -90,6 +122,7 @@ impl Default for PipelineOptions {
             compile_bytecode: true,
             eval_policy: EvalPolicy::default(),
             imag_tolerance: 1e-12,
+            bytecode_batch_parallelism: BytecodeBatchParallelism::Auto,
         }
     }
 }
@@ -142,6 +175,7 @@ pub struct CompiledPipeline {
     report: PipelineReport,
     eval_policy: EvalPolicy,
     imag_tolerance: f64,
+    bytecode_batch_parallelism: BytecodeBatchParallelism,
 }
 
 impl CompiledPipeline {
@@ -151,15 +185,19 @@ impl CompiledPipeline {
         }
     }
 
-    fn default_batch_parallelism(backend: BuiltinBackend) -> Option<VerifyParallelism> {
+    fn default_batch_parallelism(&self, backend: BuiltinBackend) -> Option<VerifyParallelism> {
         match backend {
-            BuiltinBackend::Bytecode => Some(VerifyParallelism::auto()),
+            BuiltinBackend::Bytecode => match self.bytecode_batch_parallelism {
+                BytecodeBatchParallelism::Disabled => None,
+                BytecodeBatchParallelism::Auto => Some(VerifyParallelism::auto()),
+                BytecodeBatchParallelism::Force(parallelism) => Some(parallelism),
+            },
             BuiltinBackend::Tree | BuiltinBackend::Rpn => None,
         }
     }
 
-    fn default_batch_workers(backend: BuiltinBackend, sample_count: usize) -> usize {
-        Self::default_batch_parallelism(backend)
+    fn default_batch_workers(&self, backend: BuiltinBackend, sample_count: usize) -> usize {
+        self.default_batch_parallelism(backend)
             .map(|parallelism| parallelism.effective_workers(sample_count))
             .unwrap_or(1)
     }
@@ -252,15 +290,17 @@ impl CompiledPipeline {
                 .iter()
                 .map(|vars| eval_rpn_complex_with_policy(&self.rpn, vars, &self.eval_policy))
                 .collect(),
-            BuiltinBackend::Bytecode => self
-                .bytecode
-                .as_ref()
-                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
-                .eval_complex_batch_parallel_with_policy(
-                    samples,
-                    &self.eval_policy,
-                    VerifyParallelism::auto(),
-                ),
+            BuiltinBackend::Bytecode => {
+                let program = self
+                    .bytecode
+                    .as_ref()
+                    .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?;
+                match self.default_batch_parallelism(BuiltinBackend::Bytecode) {
+                    Some(parallelism) => program
+                        .eval_complex_batch_parallel_with_policy(samples, &self.eval_policy, parallelism),
+                    None => program.eval_complex_batch_with_policy(samples, &self.eval_policy),
+                }
+            }
         }
     }
 
@@ -292,16 +332,25 @@ impl CompiledPipeline {
                     )
                 })
                 .collect(),
-            BuiltinBackend::Bytecode => self
-                .bytecode
-                .as_ref()
-                .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
-                .eval_real_batch_parallel_with_policy(
-                    samples,
-                    self.imag_tolerance,
-                    &self.eval_policy,
-                    VerifyParallelism::auto(),
-                ),
+            BuiltinBackend::Bytecode => {
+                let program = self
+                    .bytecode
+                    .as_ref()
+                    .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?;
+                match self.default_batch_parallelism(BuiltinBackend::Bytecode) {
+                    Some(parallelism) => program.eval_real_batch_parallel_with_policy(
+                        samples,
+                        self.imag_tolerance,
+                        &self.eval_policy,
+                        parallelism,
+                    ),
+                    None => program.eval_real_batch_with_policy(
+                        samples,
+                        self.imag_tolerance,
+                        &self.eval_policy,
+                    ),
+                }
+            }
         }
     }
 
@@ -411,7 +460,7 @@ impl CompiledPipeline {
         backend: BuiltinBackend,
         samples: &[Vec<Complex64>],
     ) -> EmlResult<EvalMetrics> {
-        let workers = Self::default_batch_workers(backend, samples.len());
+        let workers = self.default_batch_workers(backend, samples.len());
         let started = Instant::now();
         let _ = self.eval_complex_batch(backend, samples)?;
         let total = started.elapsed();
@@ -439,7 +488,7 @@ impl CompiledPipeline {
         backend: BuiltinBackend,
         samples: &[Vec<f64>],
     ) -> EmlResult<EvalMetrics> {
-        let workers = Self::default_batch_workers(backend, samples.len());
+        let workers = self.default_batch_workers(backend, samples.len());
         let started = Instant::now();
         let _ = self.eval_real_batch(backend, samples)?;
         let total = started.elapsed();
@@ -880,6 +929,7 @@ impl PipelineBuilder {
             report,
             eval_policy: options.eval_policy,
             imag_tolerance: options.imag_tolerance,
+            bytecode_batch_parallelism: options.bytecode_batch_parallelism,
         };
 
         let metrics = CompileMetrics {
