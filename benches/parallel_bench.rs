@@ -30,7 +30,7 @@ fn parallel_threshold_pipeline() -> eml_rs::api::CompiledPipeline {
 
 fn bytecode_parallel_pipeline() -> eml_rs::api::CompiledPipeline {
     PipelineBuilder::new()
-    .compile_str("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .compile_str("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
         .unwrap()
 }
 
@@ -106,6 +106,7 @@ fn bench_parallel_threshold_rpn(c: &mut Criterion) {
 
 fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
     let pipeline = bytecode_parallel_pipeline();
+    let program = pipeline.bytecode().unwrap();
     let parallelism = VerifyParallelism::auto();
 
     for batch_size in BYTECODE_PARALLEL_BATCH_SIZES {
@@ -115,11 +116,7 @@ fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
 
         c.bench_function(&serial_name, |b| {
             b.iter(|| {
-                black_box(
-                    pipeline
-                        .eval_complex_batch(BuiltinBackend::Bytecode, black_box(&samples))
-                        .unwrap(),
-                );
+                black_box(program.eval_complex_batch(black_box(&samples)).unwrap());
             })
         });
 

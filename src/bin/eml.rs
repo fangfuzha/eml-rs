@@ -272,11 +272,13 @@ fn cmd_profile(args: &[String]) -> Result<(), String> {
         match eval_metrics {
             Ok(eval_metrics) => {
                 println!(
-                    "eval_backend={} eval_total_ms={:.6} eval_per_sample_us={:.6} eval_samples={}",
+                    "eval_backend={} eval_total_ms={:.6} eval_per_sample_us={:.6} eval_samples={} eval_parallel={} eval_workers={}",
                     backend_name(eval_metrics.backend),
                     eval_metrics.total.as_secs_f64() * 1000.0,
                     eval_metrics.per_sample.as_secs_f64() * 1_000_000.0,
-                    eval_metrics.samples
+                    eval_metrics.samples,
+                    eval_metrics.parallel,
+                    eval_metrics.workers
                 );
             }
             Err(err) => {

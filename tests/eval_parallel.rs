@@ -102,3 +102,32 @@ fn parallel_real_batch_eval_matches_serial_bytecode() {
 
     assert_eq!(parallel, serial);
 }
+
+#[test]
+fn default_bytecode_batch_eval_matches_serial_program() {
+    let pipeline = PipelineBuilder::new()
+        .compile_str("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap();
+    let samples = (0..1_024)
+        .map(|i| {
+            let base = 0.01 + (i as f64) * 0.0005;
+            vec![
+                Complex64::new(base, 0.0),
+                Complex64::new(base + 0.05, 0.0),
+                Complex64::new(base + 0.1, 0.0),
+                Complex64::new(base + 0.15, 0.0),
+            ]
+        })
+        .collect::<Vec<_>>();
+
+    let serial = pipeline
+        .bytecode()
+        .unwrap()
+        .eval_complex_batch_with_policy(&samples, &eml_rs::core::EvalPolicy::default())
+        .unwrap();
+    let automatic = pipeline
+        .eval_complex_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+
+    assert_eq!(automatic, serial);
+}

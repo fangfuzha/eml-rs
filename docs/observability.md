@@ -5,6 +5,7 @@
 ### 当前能力
 - `PipelineReport`: 暴露源表达式节点数、IR 统计、字节码指令数。
 - `PipelineObserver`: 在 `Parsed / OptimizedSource / SourcePass / Lowered / ExprPass / BytecodeCompiled` 阶段发事件。
+- `EvalMetrics` / `VerifyMetrics`: 暴露 batch 耗时、`parallel` 标记和 `workers`，可用于判断默认策略是否触发了样本级并行。
 - benchmark gate: 记录 `median/P95/P99` 与比值门槛。
 
 ### 当前不做的事
@@ -22,6 +23,7 @@
 ### Current Capability
 - `PipelineReport` exposes source-node counts, IR stats, and bytecode instruction counts.
 - `PipelineObserver` emits events for `Parsed / OptimizedSource / SourcePass / Lowered / ExprPass / BytecodeCompiled`.
+- `EvalMetrics` / `VerifyMetrics` expose batch timings plus `parallel` and `workers`, which makes it possible to see when the default strategy switched into sample-level parallel execution.
 - The benchmark gate tracks `median/P95/P99` and ratio thresholds.
 
 ### What Is Not Built In

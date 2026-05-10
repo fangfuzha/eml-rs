@@ -64,6 +64,7 @@ cargo run --bin eml -- profile "softplus(x0) + mish(x0)" --relaxed
 - `parse_ms` / `simplify_ms` / `lowering_ms` / `rpn_build_ms` / `bytecode_build_ms`。
 - `eval_backend=tree|rpn|bytecode`。
 - `eval_total_ms` / `eval_per_sample_us` / `eval_samples`。
+- `eval_parallel=true|false` / `eval_workers=<usize>`：是否触发样本级并行，以及实际 worker 数。当前默认情况下，`Bytecode` 的大 batch 可能自动并行。
 
 ## English
 
@@ -129,3 +130,4 @@ The output includes:
 - `parse_ms` / `simplify_ms` / `lowering_ms` / `rpn_build_ms` / `bytecode_build_ms`.
 - `eval_backend=tree|rpn|bytecode`.
 - `eval_total_ms` / `eval_per_sample_us` / `eval_samples`.
+- `eval_parallel=true|false` / `eval_workers=<usize>`: whether sample-level parallelism was used and how many workers were effective. Large `Bytecode` batches may auto-parallelize by default.

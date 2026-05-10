@@ -23,35 +23,35 @@
       "lhs": "eml_ln_rpn_eval",
       "rhs": "eml_ln_tree_eval",
       "metric": "median",
-      "max": 1.15
+      "max": 1.10
     },
     {
       "name": "bytecode_vs_tree_median",
       "lhs": "shared_eml_bytecode_eval",
       "rhs": "shared_eml_tree_eval",
       "metric": "median",
-      "max": 0.85
+      "max": 0.25
     },
     {
       "name": "bytecode_vs_tree_p99",
       "lhs": "shared_eml_bytecode_eval",
       "rhs": "shared_eml_tree_eval",
       "metric": "p99",
-      "max": 0.95
+      "max": 0.30
     },
     {
       "name": "softmax_ce_bytecode_vs_tree_median_batch1024",
       "lhs": "softmax_ce_bytecode_eval_batch1024",
       "rhs": "softmax_ce_tree_eval_batch1024",
       "metric": "median",
-      "max": 0.85
+      "max": 0.80
     },
     {
       "name": "softmax_ce_bytecode_vs_tree_p99_batch1024",
       "lhs": "softmax_ce_bytecode_eval_batch1024",
       "rhs": "softmax_ce_tree_eval_batch1024",
       "metric": "p99",
-      "max": 0.95
+      "max": 0.85
     }
   ],
   "max_metrics": [

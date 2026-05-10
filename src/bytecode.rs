@@ -282,7 +282,8 @@ impl BytecodeProgram {
         thread::scope(|scope| {
             let mut handles = Vec::with_capacity(workers);
             for chunk in samples.chunks(chunk_size) {
-                handles.push(scope.spawn(move || self.eval_complex_batch_with_policy(chunk, policy)));
+                handles
+                    .push(scope.spawn(move || self.eval_complex_batch_with_policy(chunk, policy)));
             }
 
             let mut out = Vec::with_capacity(samples.len());
@@ -669,7 +670,9 @@ mod tests {
         };
 
         let serial = prog.eval_complex_batch(&samples).unwrap();
-        let parallel = prog.eval_complex_batch_parallel(&samples, parallelism).unwrap();
+        let parallel = prog
+            .eval_complex_batch_parallel(&samples, parallelism)
+            .unwrap();
 
         assert_eq!(parallel, serial);
     }

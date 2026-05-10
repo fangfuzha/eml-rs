@@ -168,3 +168,32 @@ fn profiled_parallel_bytecode_eval_records_worker_count() {
     assert!(metrics.parallel);
     assert_eq!(metrics.workers, 4);
 }
+
+#[test]
+fn profiled_default_bytecode_batch_eval_records_auto_worker_count() {
+    let profiled = PipelineBuilder::new()
+        .compile_str_profiled("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
+        .unwrap();
+    let samples = (0..1_024)
+        .map(|i| {
+            let base = 0.1 + (i as f64) * 0.001;
+            vec![
+                Complex64::new(base, 0.0),
+                Complex64::new(base + 0.1, 0.0),
+                Complex64::new(base + 0.2, 0.0),
+                Complex64::new(base + 0.3, 0.0),
+            ]
+        })
+        .collect::<Vec<_>>();
+    let expected_workers = VerifyParallelism::auto().effective_workers(samples.len());
+
+    let metrics = profiled
+        .pipeline
+        .profile_eval_complex_batch(BuiltinBackend::Bytecode, &samples)
+        .unwrap();
+
+    assert_eq!(metrics.backend, BuiltinBackend::Bytecode);
+    assert_eq!(metrics.samples, samples.len());
+    assert_eq!(metrics.workers, expected_workers);
+    assert_eq!(metrics.parallel, expected_workers > 1);
+}

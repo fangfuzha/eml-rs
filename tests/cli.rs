@@ -86,4 +86,6 @@ fn cli_verify_and_profile_commands_run() {
     assert!(stdout.contains("compile_total_ms="));
     assert!(stdout.contains("eval_backend=bytecode"));
     assert!(stdout.contains("eval_total_ms="));
+    assert!(stdout.contains("eval_parallel="));
+    assert!(stdout.contains("eval_workers="));
 }

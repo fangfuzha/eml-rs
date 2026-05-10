@@ -181,8 +181,8 @@
 - [x] 补齐 `100k nodes` 与更大 batch 的基准覆盖（当前覆盖到 `100k nodes` 与 `batch4096`，门禁阈值仍聚焦关键 workloads）
 - [x] 针对 bytecode eval 做第二轮单核热点优化（默认 complex 快路径已下沉到共享数值核，`eml_ln_*` 与 `softmax_ce_bytecode_eval_batch1024` 本地基准显著改善）
 - [x] 对 Tree/RPN 样本级并行做阈值调优（默认 `min_samples_per_worker=512`；本地基准显示 `batch512` 基本保持串行，`batch1024` 开始出现正收益）
-- [x] 实现 Bytecode batch 样本级并行执行（公共 API 已接入；独立 `parallel_bench` 与 Linux `parallel-bench-only` 显示 `batch256` 基本持平，`batch1024/4096` 收益明显）
-- [ ] 将新的性能门槛写入 `benchmarks/gate.json`，避免优化回退
+- [x] 实现 Bytecode batch 样本级并行执行（公共 API 已接入，并接入默认批量策略；独立 `parallel_bench` 与 Linux `parallel-bench-only` 显示 `batch256` 基本持平，`batch1024/4096` 收益明显）
+- [x] 将新的性能门槛写入 `benchmarks/gate.json`（基于 main 分支 Linux `bench-only` 结果收紧主 gate；并行实验基准仍保留在 `parallel_bench` 与 `parallel-bench-only`）
 
 ## 决策清单（需要你确认后执行）
 

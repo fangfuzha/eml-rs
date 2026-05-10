@@ -36,6 +36,7 @@
 - 用 `scripts/bench_gate.py` 对比门槛
 - 基准覆盖包含 `softmax_ce_*_batch32/256/1024/4096` 与 `lower_verify_1k/10k/100k_nodes`
 - 重点门禁仍聚焦：`shared_eml_*`、`softmax_ce_*_batch1024`、`lower_verify_10k_nodes`
+- Tree/RPN 阈值拐点与 Bytecode 并行候选评估已拆到 `cargo bench --bench parallel_bench`；Linux 上使用 `nightly.yml` 的 `parallel-bench-only` 手动入口运行，不直接纳入主 gate。
 
 ### 依赖安全与许可证
 
@@ -78,6 +79,7 @@
 - Enforce thresholds with `scripts/bench_gate.py`
 - Coverage includes `softmax_ce_*_batch32/256/1024/4096` and `lower_verify_1k/10k/100k_nodes`
 - Primary blocking workloads remain: `shared_eml_*`, `softmax_ce_*_batch1024`, `lower_verify_10k_nodes`
+- Tree/RPN threshold probing and Bytecode parallel candidate evaluation live in `cargo bench --bench parallel_bench`; on Linux they run through the manual `parallel-bench-only` target in `nightly.yml` and stay outside the main blocking gate for now.
 
 ### Dependency Security And Licensing
 

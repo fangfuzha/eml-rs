@@ -151,6 +151,19 @@ impl CompiledPipeline {
         }
     }
 
+    fn default_batch_parallelism(backend: BuiltinBackend) -> Option<VerifyParallelism> {
+        match backend {
+            BuiltinBackend::Bytecode => Some(VerifyParallelism::auto()),
+            BuiltinBackend::Tree | BuiltinBackend::Rpn => None,
+        }
+    }
+
+    fn default_batch_workers(backend: BuiltinBackend, sample_count: usize) -> usize {
+        Self::default_batch_parallelism(backend)
+            .map(|parallelism| parallelism.effective_workers(sample_count))
+            .unwrap_or(1)
+    }
+
     /// Returns the original source expression.
     pub fn source(&self) -> &SourceExpr {
         &self.source
@@ -222,6 +235,9 @@ impl CompiledPipeline {
     }
 
     /// Evaluates a batch of complex samples via one builtin backend.
+    ///
+    /// For the `Bytecode` backend, large batches may automatically switch to
+    /// sample-level parallel execution using [`VerifyParallelism::auto`].
     pub fn eval_complex_batch(
         &self,
         backend: BuiltinBackend,
@@ -240,11 +256,18 @@ impl CompiledPipeline {
                 .bytecode
                 .as_ref()
                 .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
-                .eval_complex_batch_with_policy(samples, &self.eval_policy),
+                .eval_complex_batch_parallel_with_policy(
+                    samples,
+                    &self.eval_policy,
+                    VerifyParallelism::auto(),
+                ),
         }
     }
 
     /// Evaluates a batch of real samples via one builtin backend.
+    ///
+    /// For the `Bytecode` backend, large batches may automatically switch to
+    /// sample-level parallel execution using [`VerifyParallelism::auto`].
     pub fn eval_real_batch(
         &self,
         backend: BuiltinBackend,
@@ -273,7 +296,12 @@ impl CompiledPipeline {
                 .bytecode
                 .as_ref()
                 .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?
-                .eval_real_batch_with_policy(samples, self.imag_tolerance, &self.eval_policy),
+                .eval_real_batch_parallel_with_policy(
+                    samples,
+                    self.imag_tolerance,
+                    &self.eval_policy,
+                    VerifyParallelism::auto(),
+                ),
         }
     }
 
@@ -375,11 +403,15 @@ impl CompiledPipeline {
     }
 
     /// Measures builtin complex evaluation over a batch of samples.
+    ///
+    /// This helper reports the effective worker count used by the default batch
+    /// strategy, including automatic Bytecode parallelization on large inputs.
     pub fn profile_eval_complex_batch(
         &self,
         backend: BuiltinBackend,
         samples: &[Vec<Complex64>],
     ) -> EmlResult<EvalMetrics> {
+        let workers = Self::default_batch_workers(backend, samples.len());
         let started = Instant::now();
         let _ = self.eval_complex_batch(backend, samples)?;
         let total = started.elapsed();
@@ -393,17 +425,21 @@ impl CompiledPipeline {
             samples: samples.len(),
             total,
             per_sample,
-            parallel: false,
-            workers: 1,
+            parallel: workers > 1,
+            workers,
         })
     }
 
     /// Measures builtin real-valued evaluation over a batch of samples.
+    ///
+    /// This helper reports the effective worker count used by the default batch
+    /// strategy, including automatic Bytecode parallelization on large inputs.
     pub fn profile_eval_real_batch(
         &self,
         backend: BuiltinBackend,
         samples: &[Vec<f64>],
     ) -> EmlResult<EvalMetrics> {
+        let workers = Self::default_batch_workers(backend, samples.len());
         let started = Instant::now();
         let _ = self.eval_real_batch(backend, samples)?;
         let total = started.elapsed();
@@ -417,8 +453,8 @@ impl CompiledPipeline {
             samples: samples.len(),
             total,
             per_sample,
-            parallel: false,
-            workers: 1,
+            parallel: workers > 1,
+            workers,
         })
     }
 
