@@ -2,7 +2,9 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use eml_rs::api::{BuiltinBackend, PipelineBuilder};
+use eml_rs::api::{
+    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
+};
 use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
@@ -28,8 +30,15 @@ fn parallel_threshold_pipeline() -> eml_rs::api::CompiledPipeline {
         .unwrap()
 }
 
-fn bytecode_parallel_pipeline() -> eml_rs::api::CompiledPipeline {
+fn bytecode_parallel_pipeline_with_options(
+    bytecode_batch_parallelism: BytecodeBatchParallelism,
+) -> eml_rs::api::CompiledPipeline {
+    let options = PipelineOptions {
+        bytecode_batch_parallelism,
+        ..PipelineOptions::default()
+    };
     PipelineBuilder::new()
+        .with_options(options)
         .compile_str("exp(x0) + exp(x1) + exp(x2) + exp(x3)")
         .unwrap()
 }
@@ -105,30 +114,46 @@ fn bench_parallel_threshold_rpn(c: &mut Criterion) {
 }
 
 fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
-    let pipeline = bytecode_parallel_pipeline();
-    let program = pipeline.bytecode().unwrap();
-    let parallelism = VerifyParallelism::auto();
+    let off_pipeline = bytecode_parallel_pipeline_with_options(BytecodeBatchParallelism::Disabled);
+    let auto_pipeline = bytecode_parallel_pipeline_with_options(BytecodeBatchParallelism::Auto);
+    let force_pipeline = bytecode_parallel_pipeline_with_options(
+        BytecodeBatchParallelism::force_default(),
+    );
 
     for batch_size in BYTECODE_PARALLEL_BATCH_SIZES {
         let samples = positive_real_samples(*batch_size, 4);
-        let serial_name = format!("parallel_bytecode_serial_batch{batch_size}");
+        let off_name = format!("parallel_bytecode_off_batch{batch_size}");
         let auto_name = format!("parallel_bytecode_auto_batch{batch_size}");
+        let force_name = format!("parallel_bytecode_force_batch{batch_size}");
 
-        c.bench_function(&serial_name, |b| {
+        c.bench_function(&off_name, |b| {
             b.iter(|| {
-                black_box(program.eval_complex_batch(black_box(&samples)).unwrap());
+                black_box(
+                    off_pipeline
+                        .eval_complex_batch(BuiltinBackend::Bytecode, black_box(&samples))
+                        .unwrap(),
+                );
             })
         });
 
         c.bench_function(&auto_name, |b| {
             b.iter(|| {
                 black_box(
-                    pipeline
-                        .eval_complex_batch_parallel(
+                    auto_pipeline
+                        .eval_complex_batch(
                             BuiltinBackend::Bytecode,
                             black_box(&samples),
-                            parallelism,
                         )
+                        .unwrap(),
+                );
+            })
+        });
+
+        c.bench_function(&force_name, |b| {
+            b.iter(|| {
+                black_box(
+                    force_pipeline
+                        .eval_complex_batch(BuiltinBackend::Bytecode, black_box(&samples))
                         .unwrap(),
                 );
             })

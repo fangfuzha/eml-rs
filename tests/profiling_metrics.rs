@@ -1,6 +1,4 @@
-use eml_rs::api::{
-    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
-};
+use eml_rs::api::{BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions};
 use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
@@ -187,7 +185,14 @@ fn profiled_default_bytecode_batch_eval_records_auto_worker_count() {
             ]
         })
         .collect::<Vec<_>>();
-    let expected_workers = VerifyParallelism::auto().effective_workers(samples.len());
+    let expected_workers = VerifyParallelism {
+        workers: std::thread::available_parallelism()
+            .map(usize::from)
+            .unwrap_or(1)
+            .min(8),
+        min_samples_per_worker: 512,
+    }
+    .effective_workers(samples.len());
 
     let metrics = profiled
         .pipeline

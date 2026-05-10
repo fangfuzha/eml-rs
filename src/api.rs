@@ -59,7 +59,10 @@ pub enum BuiltinBackend {
 pub enum BytecodeBatchParallelism {
     /// Always run Bytecode batch execution serially.
     Disabled,
-    /// Choose workers from [`VerifyParallelism::auto`].
+    /// Choose workers from the Bytecode-specific default policy.
+    ///
+    /// The current defaults cap workers at `8` and require at least `512`
+    /// samples per worker before parallelization turns on.
     #[default]
     Auto,
     /// Force sample-level parallel execution with the provided settings.
@@ -67,6 +70,19 @@ pub enum BytecodeBatchParallelism {
 }
 
 impl BytecodeBatchParallelism {
+    const AUTO_MIN_SAMPLES_PER_WORKER: usize = 512;
+    const AUTO_MAX_WORKERS: usize = 8;
+
+    fn auto_parallelism() -> VerifyParallelism {
+        VerifyParallelism {
+            workers: thread::available_parallelism()
+                .map(usize::from)
+                .unwrap_or(1)
+                .min(Self::AUTO_MAX_WORKERS),
+            min_samples_per_worker: Self::AUTO_MIN_SAMPLES_PER_WORKER,
+        }
+    }
+
     /// Forces Bytecode batch execution to use all available workers with a
     /// per-worker minimum of one sample.
     pub fn force_default() -> Self {
@@ -189,7 +205,7 @@ impl CompiledPipeline {
         match backend {
             BuiltinBackend::Bytecode => match self.bytecode_batch_parallelism {
                 BytecodeBatchParallelism::Disabled => None,
-                BytecodeBatchParallelism::Auto => Some(VerifyParallelism::auto()),
+                BytecodeBatchParallelism::Auto => Some(BytecodeBatchParallelism::auto_parallelism()),
                 BytecodeBatchParallelism::Force(parallelism) => Some(parallelism),
             },
             BuiltinBackend::Tree | BuiltinBackend::Rpn => None,
@@ -275,7 +291,8 @@ impl CompiledPipeline {
     /// Evaluates a batch of complex samples via one builtin backend.
     ///
     /// For the `Bytecode` backend, large batches may automatically switch to
-    /// sample-level parallel execution using [`VerifyParallelism::auto`].
+    /// sample-level parallel execution using the Bytecode-specific default
+    /// policy (`workers <= 8`, `min_samples_per_worker = 512`).
     pub fn eval_complex_batch(
         &self,
         backend: BuiltinBackend,
@@ -296,8 +313,11 @@ impl CompiledPipeline {
                     .as_ref()
                     .ok_or(EmlError::Unsupported("bytecode backend was not compiled"))?;
                 match self.default_batch_parallelism(BuiltinBackend::Bytecode) {
-                    Some(parallelism) => program
-                        .eval_complex_batch_parallel_with_policy(samples, &self.eval_policy, parallelism),
+                    Some(parallelism) => program.eval_complex_batch_parallel_with_policy(
+                        samples,
+                        &self.eval_policy,
+                        parallelism,
+                    ),
                     None => program.eval_complex_batch_with_policy(samples, &self.eval_policy),
                 }
             }
@@ -307,7 +327,8 @@ impl CompiledPipeline {
     /// Evaluates a batch of real samples via one builtin backend.
     ///
     /// For the `Bytecode` backend, large batches may automatically switch to
-    /// sample-level parallel execution using [`VerifyParallelism::auto`].
+    /// sample-level parallel execution using the Bytecode-specific default
+    /// policy (`workers <= 8`, `min_samples_per_worker = 512`).
     pub fn eval_real_batch(
         &self,
         backend: BuiltinBackend,
