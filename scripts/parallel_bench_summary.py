@@ -9,7 +9,6 @@ import pathlib
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-
 BYTECODE_AUTO_MAX_WORKERS = 8
 BYTECODE_AUTO_MIN_SAMPLES_PER_WORKER = 256
 
@@ -47,6 +46,26 @@ def median_winner(modes: Dict[str, Dict[str, float]]) -> str:
   return min(modes, key=lambda name: modes[name]["median"])
 
 
+def ranked_modes(
+    modes: Dict[str, Dict[str, float]]) -> List[tuple[str, float]]:
+  """Return modes sorted by median point estimate ascending."""
+  return sorted(
+      ((name, values["median"]) for name, values in modes.items()),
+      key=lambda item: item[1],
+  )
+
+
+def recommendation_confidence(best: float, second_best: float) -> str:
+  if second_best <= 0.0:
+    return "unknown"
+  ratio_vs_second = best / second_best
+  if ratio_vs_second <= 0.90:
+    return "high"
+  if ratio_vs_second <= 0.97:
+    return "medium"
+  return "low"
+
+
 def collect_bytecode_modes(
     benchmarks: Dict[str, Dict[str, float]], ) -> List[Dict[str, Any]]:
   out: List[Dict[str, Any]] = []
@@ -55,12 +74,22 @@ def collect_bytecode_modes(
     auto = benchmarks[f"parallel_bytecode_auto_batch{batch_size}"]
     force = benchmarks[f"parallel_bytecode_force_batch{batch_size}"]
     modes = {"off": off, "auto": auto, "force": force}
+    ranking = ranked_modes(modes)
     out.append({
-        "batch_size": batch_size,
-        "off": off,
-        "auto": auto,
-        "force": force,
-        "median_winner": median_winner(modes),
+        "batch_size":
+        batch_size,
+        "off":
+        off,
+        "auto":
+        auto,
+        "force":
+        force,
+        "median_winner":
+        median_winner(modes),
+        "median_ranking": [{
+            "mode": name,
+            "median": median,
+        } for name, median in ranking],
         "ratios": {
             "auto_vs_off_median": ratio(auto["median"], off["median"]),
             "force_vs_off_median": ratio(force["median"], off["median"]),
@@ -71,18 +100,62 @@ def collect_bytecode_modes(
 
 
 def collect_bytecode_policy_analysis(
-  bytecode_modes: List[Dict[str, Any]], ) -> Dict[str, Any]:
+    bytecode_modes: List[Dict[str, Any]], ) -> Dict[str, Any]:
   """Summarize the configured default policy and batch-level winners."""
+  batch_recommendations: List[Dict[str, Any]] = []
+  for entry in bytecode_modes:
+    ranking = entry["median_ranking"]
+    best = ranking[0]
+    second_best = ranking[1]
+    batch_recommendations.append({
+        "batch_size":
+        entry["batch_size"],
+        "recommended_mode":
+        best["mode"],
+        "confidence":
+        recommendation_confidence(best["median"], second_best["median"]),
+        "winner_margin_vs_second":
+        ratio(best["median"], second_best["median"]),
+    })
+
+  auto_vs_off_small = bytecode_modes[0]["ratios"]["auto_vs_off_median"]
+  auto_vs_off_mid = bytecode_modes[1]["ratios"]["auto_vs_off_median"]
+  auto_vs_off_large = bytecode_modes[2]["ratios"]["auto_vs_off_median"]
+  keep_auto_default = (auto_vs_off_small is not None
+                       and auto_vs_off_small <= 1.10
+                       and auto_vs_off_mid is not None
+                       and auto_vs_off_mid < 1.0
+                       and auto_vs_off_large is not None
+                       and auto_vs_off_large < 1.0)
+  default_reason = ("keep-auto-default" if keep_auto_default else
+                    "revisit-bytecode-auto-threshold")
+
   return {
-    "configured_default": {
-      "mode": "auto",
-      "workers_cap": BYTECODE_AUTO_MAX_WORKERS,
-      "min_samples_per_worker": BYTECODE_AUTO_MIN_SAMPLES_PER_WORKER,
-    },
-    "batch_median_winners": [{
-      "batch_size": entry["batch_size"],
-      "winner": entry["median_winner"],
-    } for entry in bytecode_modes],
+      "configured_default": {
+          "mode": "auto",
+          "workers_cap": BYTECODE_AUTO_MAX_WORKERS,
+          "min_samples_per_worker": BYTECODE_AUTO_MIN_SAMPLES_PER_WORKER,
+      },
+      "batch_median_winners": [{
+          "batch_size": entry["batch_size"],
+          "winner": entry["median_winner"],
+      } for entry in bytecode_modes],
+      "batch_recommendations":
+      batch_recommendations,
+      "default_policy_recommendation": {
+          "recommended_mode":
+          "auto" if keep_auto_default else
+          batch_recommendations[-1]["recommended_mode"],
+          "keep_configured_default":
+          keep_auto_default,
+          "reason":
+          default_reason,
+          "evidence": {
+              "auto_vs_off_batch256": auto_vs_off_small,
+              "auto_vs_off_batch1024": auto_vs_off_mid,
+              "auto_vs_off_batch4096": auto_vs_off_large,
+          },
+      },
   }
 
 
@@ -125,7 +198,8 @@ def main() -> int:
       "generated_at": datetime.now(timezone.utc).isoformat(),
       "criterion_dir": str(criterion_dir),
       "bytecode_modes": bytecode_modes,
-      "bytecode_policy_analysis": collect_bytecode_policy_analysis(bytecode_modes),
+      "bytecode_policy_analysis":
+      collect_bytecode_policy_analysis(bytecode_modes),
       "parallel_thresholds": collect_parallel_thresholds(benchmarks),
   }
 
