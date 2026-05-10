@@ -7,7 +7,7 @@
 与 Bytecode 批量执行相关的实验可以通过 `--bytecode-parallel` 控制：
 
 - `off`: 禁用默认样本级并行。
-- `auto`: 使用 Bytecode 专用默认阈值策略。当前默认值为“最多 `8` 个 workers，且每个 worker 至少分到 `512` 个样本”。
+- `auto`: 使用 Bytecode 专用默认阈值策略。当前默认值为“最多 `8` 个 workers，且每个 worker 至少分到 `128` 个样本”。
 - `force`: 强制启用样本级并行；可选 `--bytecode-workers` 与 `--bytecode-min-samples-per-worker`。
 
 ### 构建
@@ -85,7 +85,7 @@ The `eml` CLI is a research-time entry point, not a replacement for the Rust API
 Bytecode batch experiments can be controlled with `--bytecode-parallel`:
 
 - `off`: disable the default sample-level parallel path.
-- `auto`: use the Bytecode-specific default threshold policy. The current default caps workers at `8` and requires at least `512` samples per worker.
+- `auto`: use the Bytecode-specific default threshold policy. The current default caps workers at `8` and requires at least `128` samples per worker.
 - `force`: force sample-level parallel execution; optionally combine with `--bytecode-workers` and `--bytecode-min-samples-per-worker`.
 
 ### Build

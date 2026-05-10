@@ -19,7 +19,7 @@
 
 - 库内实验：直接挂 `PipelineObserver` 收集阶段事件。
 - CI/性能治理：依赖 `criterion + bench_gate.py`。
-- 交互式对照：通过 CLI 的 `--bytecode-parallel off|auto|force` 配合 `eval_parallel` / `eval_workers` 输出观察默认策略切换点。当前 Bytecode `auto` 的默认值为 `workers <= 8`、`min_samples_per_worker = 512`。
+- 交互式对照：通过 CLI 的 `--bytecode-parallel off|auto|force` 配合 `eval_parallel` / `eval_workers` 输出观察默认策略切换点。当前 Bytecode `auto` 的默认值为 `workers <= 8`、`min_samples_per_worker = 128`。
 - 未来如要对接服务框架，再由宿主系统把 `PipelineReport` 映射到日志、指标或 trace。
 
 ## English
@@ -41,5 +41,5 @@
 
 - In-library experiments: attach a `PipelineObserver`.
 - CI and performance governance: rely on `criterion + bench_gate.py`.
-- Interactive comparison: use the CLI `--bytecode-parallel off|auto|force` switch together with `eval_parallel` / `eval_workers` to inspect when the default strategy changes mode. The current Bytecode `auto` defaults are `workers <= 8` and `min_samples_per_worker = 512`.
+- Interactive comparison: use the CLI `--bytecode-parallel off|auto|force` switch together with `eval_parallel` / `eval_workers` to inspect when the default strategy changes mode. The current Bytecode `auto` defaults are `workers <= 8` and `min_samples_per_worker = 128`.
 - If this is embedded into a service later, let the host system map `PipelineReport` into logs, metrics, or traces.

@@ -61,7 +61,7 @@ pub enum BytecodeBatchParallelism {
     Disabled,
     /// Choose workers from the Bytecode-specific default policy.
     ///
-    /// The current defaults cap workers at `8` and require at least `512`
+    /// The current defaults cap workers at `8` and require at least `128`
     /// samples per worker before parallelization turns on.
     #[default]
     Auto,
@@ -70,7 +70,7 @@ pub enum BytecodeBatchParallelism {
 }
 
 impl BytecodeBatchParallelism {
-    const AUTO_MIN_SAMPLES_PER_WORKER: usize = 512;
+    const AUTO_MIN_SAMPLES_PER_WORKER: usize = 128;
     const AUTO_MAX_WORKERS: usize = 8;
 
     fn auto_parallelism() -> VerifyParallelism {
