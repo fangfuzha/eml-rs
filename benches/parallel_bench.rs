@@ -2,9 +2,7 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use eml_rs::api::{
-    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
-};
+use eml_rs::api::{BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions};
 use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
@@ -116,9 +114,8 @@ fn bench_parallel_threshold_rpn(c: &mut Criterion) {
 fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
     let off_pipeline = bytecode_parallel_pipeline_with_options(BytecodeBatchParallelism::Disabled);
     let auto_pipeline = bytecode_parallel_pipeline_with_options(BytecodeBatchParallelism::Auto);
-    let force_pipeline = bytecode_parallel_pipeline_with_options(
-        BytecodeBatchParallelism::force_default(),
-    );
+    let force_pipeline =
+        bytecode_parallel_pipeline_with_options(BytecodeBatchParallelism::force_default());
 
     for batch_size in BYTECODE_PARALLEL_BATCH_SIZES {
         let samples = positive_real_samples(*batch_size, 4);
@@ -140,10 +137,7 @@ fn bench_bytecode_parallel_candidate(c: &mut Criterion) {
             b.iter(|| {
                 black_box(
                     auto_pipeline
-                        .eval_complex_batch(
-                            BuiltinBackend::Bytecode,
-                            black_box(&samples),
-                        )
+                        .eval_complex_batch(BuiltinBackend::Bytecode, black_box(&samples))
                         .unwrap(),
                 );
             })

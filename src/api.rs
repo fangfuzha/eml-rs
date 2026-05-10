@@ -205,7 +205,9 @@ impl CompiledPipeline {
         match backend {
             BuiltinBackend::Bytecode => match self.bytecode_batch_parallelism {
                 BytecodeBatchParallelism::Disabled => None,
-                BytecodeBatchParallelism::Auto => Some(BytecodeBatchParallelism::auto_parallelism()),
+                BytecodeBatchParallelism::Auto => {
+                    Some(BytecodeBatchParallelism::auto_parallelism())
+                }
                 BytecodeBatchParallelism::Force(parallelism) => Some(parallelism),
             },
             BuiltinBackend::Tree | BuiltinBackend::Rpn => None,
