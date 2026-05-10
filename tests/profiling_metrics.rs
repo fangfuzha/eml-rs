@@ -190,7 +190,7 @@ fn profiled_default_bytecode_batch_eval_records_auto_worker_count() {
             .map(usize::from)
             .unwrap_or(1)
             .min(8),
-        min_samples_per_worker: 128,
+        min_samples_per_worker: 256,
     }
     .effective_workers(samples.len());
 
