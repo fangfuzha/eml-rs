@@ -212,6 +212,45 @@
 - [x] 将论文复现资产、运行时性能门禁、SR 实验结果拆成三条独立治理链路
 - [x] 评估是否为 `v0.2.0` 定义“论文复现可审计”版本目标
 
+## P22: 论文基集缺口补齐
+
+- [ ] 为 `asinh` / `acosh` / `atanh` 增加公开 `SourceExpr`、parser、eval、symbolic derivative 与 lowering 入口，并补 paper-basis 回归测试
+- [ ] 为 `hypot(x, y)` 增加公开 AST / parser / eval / lowering 入口，明确它属于 paper-basis 而非 runtime 性能模板
+- [ ] 为 `half` / `inv` / `sqr` / `avg` / arbitrary-base `log_x(y)` 建立统一的 paper-basis 命名入口或明确维持组合表达的治理理由
+- [ ] 更新 `docs/paper-basis-catalog.*`，把 P22 新覆盖项从 `missing` / `partial` 调整为 `covered`，并补充对应 witness 与测试锚点
+- [ ] 将 P22 新增能力纳入 `tests/paper_reproduction.rs` 第二批 witness replay，覆盖负实轴、零邻域与复平面分支语义
+
+## P23: 论文见证式审计与 gate 升级
+
+- [ ] 将 `scripts/paper_reproduction_summary.py` 的 replayed witness 列表改为从 `docs/paper-basis-catalog.json` 消费，避免测试、脚本、文档三份 witness 清单漂移
+- [ ] 为 paper reproduction artifact 增加 schema version、coverage ratio、missing/partial 明细与 witness provenance 摘要
+- [ ] 增加 `--require-min-covered-ratio` / `--require-no-missing-replayed` 等可选门禁参数，保持 nightly 默认非阻断
+- [ ] 在 nightly 中保留 artifact-first，但为 `workflow_dispatch` 增加可手动开启的严格 paper-reproduction gate
+- [ ] 评估是否把第一批已稳定 witness replay 升级为主 CI 阻断条件之外的轻量强制 artifact 检查
+
+## P24: 符号回归研究面增强
+
+- [ ] 将 `scripts/sr_research_benchmark.py` 的固定模板扩展为多目标任务集：`exp-log` 模板、三角模板、低阶多项式模板
+- [ ] 为 SR benchmark 增加多 seed 重复试验，输出均值、方差、最优/最差 run 与失败样本摘要
+- [ ] 增加 snapping 规则说明：参数容差、表达式等价判断、数值等价采样域与不可判定状态
+- [ ] 将 SR JSON schema 与 Markdown 摘要写入 `docs/testing.md` 或独立研究文档，避免脚本输出成为隐式协议
+- [ ] 保持 SR 结果为 nightly / workflow_dispatch 非阻断 artifact，不与 runtime 性能 gate 混合
+
+## P25: `v0.2.0` 论文复现可审计准备
+
+- [ ] 定义 `v0.2.0` 范围：paper-basis catalog schema、代表性 witness replay、P22 缺口处理状态、artifact 审计链路
+- [ ] 新建 `docs/releases/v0.2.0/` 草案，记录本阶段论文复现资产、已知缺口、非目标与升级 gate 决策
+- [ ] 增加 release 前检查清单：`cargo test --all-targets`、paper reproduction summary、SR research summary、nightly artifact 可下载性
+- [ ] 更新 README / user-guide / developer-guide 中的 `paper-basis` 入口，确保使用者能从首页找到复现资产
+- [ ] 在发布说明中明确 `repo-extension` 训练模板仍是工程扩展，不作为论文 Table 1 完备性声明的一部分
+
+## 后续执行顺序（P22+）
+
+- [ ] 先完成 P22 的 paper-basis 缺口补齐，再考虑 P23 的 gate 升级
+- [ ] P23 只升级稳定、低波动、可解释的检查；SR recovery rate 继续保留为非阻断研究指标
+- [ ] P24 的 SR 增强不得影响主 CI 时长和 runtime 性能门禁
+- [ ] P25 发布准备必须以 P22/P23 的实际完成状态为准，不为了版本目标隐瞒 `missing` / `partial` 缺口
+
 ## 后续执行顺序（冻结）
 
 - [x] 先完成 P18 再推进 P19；P20 在 P18 完成后可并行试验
