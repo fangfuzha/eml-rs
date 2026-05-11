@@ -7,13 +7,36 @@
 
 ### 功能验收
 
-| 类别           | 验收规则                                                                | 执行方式                                  |
-| -------------- | ----------------------------------------------------------------------- | ----------------------------------------- |
-| 统一表示       | 常见初等函数与已列出的 AI 激活/损失模板可降级到纯 EML IR                | `CI enforced`：`cargo test --all-targets` |
-| 自动微分       | `symbolic_derivative` 生成的表达式经过简化后保持数值一致                | `CI enforced`：集成测试                   |
-| 表达式规模控制 | 简化后的导数表达式节点数不高于 naive 版本的 60%                         | `CI enforced`：集成测试                   |
-| 向量模板       | softmax / cross-entropy / label smoothing / focal loss 模板可构造并求值 | `CI enforced`：集成测试                   |
-| 反降级         | `Expr -> SourceExpr` 的回升结果与原 EML 语义一致                        | `CI enforced`：集成测试                   |
+| 类别           | 验收规则                                                                             | 执行方式                                              |
+| -------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| 论文基集复现   | 代表性 paper-basis witness 必须通过纯 EML、lowering、source reference 三方一致性回放 | `CI enforced`：`cargo test --test paper_reproduction` |
+| 统一表示       | 常见初等函数与已列出的 AI 激活/损失模板可降级到纯 EML IR                             | `CI enforced`：`cargo test --all-targets`             |
+| 自动微分       | `symbolic_derivative` 生成的表达式经过简化后保持数值一致                             | `CI enforced`：集成测试                               |
+| 表达式规模控制 | 简化后的导数表达式节点数不高于 naive 版本的 60%                                      | `CI enforced`：集成测试                               |
+| 向量模板       | softmax / cross-entropy / label smoothing / focal loss 模板可构造并求值              | `CI enforced`：集成测试                               |
+| 反降级         | `Expr -> SourceExpr` 的回升结果与原 EML 语义一致                                     | `CI enforced`：集成测试                               |
+
+### 论文复现验收
+
+| 类别           | 验收规则                                                                                      | 执行方式                                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 基集目录       | `paper-basis` 与 `repo-extension` 分类必须以 `docs/paper-basis-catalog.json` 为机器可读事实源 | `CI enforced`：`tests/paper_reproduction.rs` 读取 catalog 并核对 replayed witness 条目                            |
+| 见证式回放     | 第一批代表性 witness 覆盖 `exp/ln/+/-/*///pow`                                                | `CI enforced`：`cargo test --test paper_reproduction`                                                             |
+| 采样域覆盖     | 回归样本覆盖正实轴、负实轴、零邻域和复平面                                                    | `CI enforced`：`cargo test --test paper_reproduction`                                                             |
+| 复现 artifact  | 每次 nightly 可生成 JSON 与 Markdown 摘要，用于审计但暂不阻断主流程                           | `non-blocking artifact`：`python3 scripts/paper_reproduction_summary.py` -> `target/paper-reproduction-summary.*` |
+| 升级 gate 条件 | artifact 历史稳定后，再决定是否把摘要检查升级为阻断式 gate                                    | `manual governance decision`                                                                                      |
+
+### 治理链路
+
+| 链路             | 资产/入口                                                                                                    | 门禁策略                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| 论文复现资产     | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | 测试阻断，摘要先非阻断 artifact              |
+| 运行时性能门禁   | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | 关键 benchmark 阻断；指标工具按场景手动/夜间 |
+| 符号回归研究结果 | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly 非阻断 artifact  |
+
+### v0.2.0 论文复现目标评估
+
+建议把 `v0.2.0` 的研究目标定义为“论文复现可审计”：至少冻结 `paper-basis` catalog schema、保留代表性 witness replay、持续产出 nightly artifact，并把 `repo-extension` 训练模板与运行时性能门禁保持分离。
 
 ### 性能验收
 
@@ -65,13 +88,36 @@ Each rule is labeled as either `CI enforced` or `manual audit`.
 
 ### Functional Acceptance
 
-| Category                  | Rule                                                                                                  | Enforcement                               |
-| ------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Unified representation    | Common elementary functions and the listed AI activation/loss templates must lower into pure EML IR   | `CI enforced`: `cargo test --all-targets` |
-| Autodiff                  | `symbolic_derivative` outputs remain numerically consistent after simplification                      | `CI enforced`: integration tests          |
-| Expression growth control | Simplified derivative trees must stay within 60% of naive node count                                  | `CI enforced`: integration tests          |
-| Vector templates          | softmax / cross-entropy / label smoothing / focal loss templates must build and evaluate successfully | `CI enforced`: integration tests          |
-| De-lowering               | `Expr -> SourceExpr` must preserve the original EML semantics                                         | `CI enforced`: integration tests          |
+| Category                  | Rule                                                                                                          | Enforcement                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Paper-basis reproduction  | Representative paper-basis witnesses must replay consistently across pure EML, lowering, and source reference | `CI enforced`: `cargo test --test paper_reproduction` |
+| Unified representation    | Common elementary functions and the listed AI activation/loss templates must lower into pure EML IR           | `CI enforced`: `cargo test --all-targets`             |
+| Autodiff                  | `symbolic_derivative` outputs remain numerically consistent after simplification                              | `CI enforced`: integration tests                      |
+| Expression growth control | Simplified derivative trees must stay within 60% of naive node count                                          | `CI enforced`: integration tests                      |
+| Vector templates          | softmax / cross-entropy / label smoothing / focal loss templates must build and evaluate successfully         | `CI enforced`: integration tests                      |
+| De-lowering               | `Expr -> SourceExpr` must preserve the original EML semantics                                                 | `CI enforced`: integration tests                      |
+
+### Paper Reproduction Acceptance
+
+| Category              | Rule                                                                                                                               | Enforcement                                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Basis catalog         | `paper-basis` and `repo-extension` classification must use `docs/paper-basis-catalog.json` as the machine-readable source of truth | `CI enforced`: `tests/paper_reproduction.rs` reads the catalog and checks replayed witness entries                |
+| Witness replay        | The first representative witness batch covers `exp/ln/+/-/*///pow`                                                                 | `CI enforced`: `cargo test --test paper_reproduction`                                                             |
+| Domain coverage       | Regression samples cover the positive real axis, negative real axis, zero neighborhood, and complex plane                          | `CI enforced`: `cargo test --test paper_reproduction`                                                             |
+| Reproduction artifact | Nightly can generate JSON and Markdown summaries for audit without blocking the main pipeline                                      | `non-blocking artifact`: `python3 scripts/paper_reproduction_summary.py` -> `target/paper-reproduction-summary.*` |
+| Gate promotion        | Promote summary checks to a blocking gate only after artifact history is stable                                                    | `manual governance decision`                                                                                      |
+
+### Governance Tracks
+
+| Track                        | Assets / Entry Points                                                                                        | Gate Policy                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| Paper reproduction assets    | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | blocking tests, non-blocking summary artifacts     |
+| Runtime performance gates    | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | key benchmarks block; metrics run manually/nightly |
+| Symbolic-regression research | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly non-blocking artifacts |
+
+### v0.2.0 Paper-Reproducibility Target
+
+Recommended `v0.2.0` research target: auditable paper reproduction. At minimum, freeze the `paper-basis` catalog schema, keep representative witness replay, emit nightly artifacts, and keep `repo-extension` training templates separate from runtime performance gates.
 
 ### Performance Acceptance
 

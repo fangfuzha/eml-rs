@@ -1,0 +1,425 @@
+{
+  "schema": "eml-rs.paper-basis-catalog.v1",
+  "paper": {
+    "title": "All elementary functions from a single binary operator",
+    "arxiv": "2603.21852v2"
+  },
+  "notes": {
+    "scope": "The catalog tracks the paper Table 1 scientific-calculator basis rather than arbitrary repository extensions.",
+    "statusValues": ["covered", "partial", "missing"],
+    "categoryValues": ["paper-basis", "repo-extension"]
+  },
+  "constants": [
+    {
+      "name": "x",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "variable",
+      "evidence": "High-confidence reconstruction from the paper text and current Var-based AST.",
+      "anchors": ["crates/eml-lowering/src/lib.rs:SourceExpr::Var"]
+    },
+    {
+      "name": "y",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "variable",
+      "evidence": "High-confidence reconstruction from the paper text and current Var-based AST.",
+      "anchors": ["crates/eml-lowering/src/lib.rs:SourceExpr::Var"]
+    },
+    {
+      "name": "1",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Paper terminal constant; represented by Int(1) and LoweredExpr::One.",
+      "anchors": [
+        "crates/eml-lowering/src/lib.rs:Int(1)",
+        "crates/eml-lowering/src/lib.rs:LoweredExpr::One"
+      ]
+    },
+    {
+      "name": "-1",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Representable by Int(-1).",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Int(i64)"]
+    },
+    {
+      "name": "2",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Representable by Int(2).",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Int(i64)"]
+    },
+    {
+      "name": "e",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Explicit ConstE in AST.",
+      "anchors": ["crates/eml-lowering/src/lib.rs:ConstE"],
+      "witness": {
+        "formula": "eml(1, 1)",
+        "source": "paper-and-lowering",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "pi",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Explicit ConstPi in AST.",
+      "anchors": ["crates/eml-lowering/src/lib.rs:ConstPi"]
+    },
+    {
+      "name": "i",
+      "category": "paper-basis",
+      "status": "covered",
+      "kind": "constant",
+      "evidence": "Explicit ConstI in AST.",
+      "anchors": ["crates/eml-lowering/src/lib.rs:ConstI"]
+    }
+  ],
+  "unaryFunctions": [
+    {
+      "name": "minus",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Neg"],
+      "notes": "Mapped to unary negation.",
+      "witness": {
+        "formula": "(1 - x) - 1",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "half",
+      "category": "paper-basis",
+      "status": "partial",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Div"],
+      "notes": "Representable as Div(x, 2) but not exposed as a dedicated member."
+    },
+    {
+      "name": "inv",
+      "category": "paper-basis",
+      "status": "partial",
+      "anchors": [
+        "crates/eml-lowering/src/lib.rs:eml_inv",
+        "crates/eml-lowering/src/lib.rs:Div"
+      ],
+      "notes": "Public AST uses Div(1, x).",
+      "witness": {
+        "formula": "exp(-ln(x))",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "sqr",
+      "category": "paper-basis",
+      "status": "partial",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Pow"],
+      "notes": "Representable as Pow(x, 2) but not exposed as a dedicated member."
+    },
+    {
+      "name": "sqrt",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Sqrt"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "witness": {
+        "formula": "x^(1/2)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "exp",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Exp"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_eml_exp_matches_complex_exp"
+      ],
+      "witness": {
+        "formula": "eml(x, 1)",
+        "source": "paper-and-lowering",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "log",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Log"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_eml_log_formula_matches_real_ln"
+      ],
+      "witness": {
+        "formula": "eml(1, eml(eml(1, x), 1))",
+        "rpn": "11xE1EE",
+        "source": "paper-and-lowering",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "sin",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Sin"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_source_lowering_matches_native_reference"
+      ],
+      "witness": {
+        "formula": "(exp(i*x) - exp(-i*x)) / (2*i)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "cos",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Cos"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_source_lowering_matches_native_reference"
+      ],
+      "witness": {
+        "formula": "(exp(i*x) + exp(-i*x)) / 2",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "tan",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Tan"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "witness": {
+        "formula": "sin(x) / cos(x)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "sinh",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Sinh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "witness": {
+        "formula": "(exp(x) - exp(-x)) / 2",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "cosh",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Cosh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "witness": {
+        "formula": "(exp(x) + exp(-x)) / 2",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "tanh",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Tanh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "witness": {
+        "formula": "sinh(x) / cosh(x)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "asin",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Asin"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "notes": "Repository has an explicit lowering witness, but the current public source set used for cataloging is stronger on existence/complexity than on paper-side direct transcription."
+    },
+    {
+      "name": "acos",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Acos"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "notes": "Repository has an explicit lowering witness, but the current public source set used for cataloging is stronger on existence/complexity than on paper-side direct transcription."
+    },
+    {
+      "name": "atan",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Atan"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_extended_elementary_functions_match_reference"
+      ],
+      "notes": "Repository has an explicit lowering witness, but the current public source set used for cataloging is stronger on existence/complexity than on paper-side direct transcription."
+    },
+    {
+      "name": "asinh",
+      "category": "paper-basis",
+      "status": "missing",
+      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+    },
+    {
+      "name": "acosh",
+      "category": "paper-basis",
+      "status": "missing",
+      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+    },
+    {
+      "name": "atanh",
+      "category": "paper-basis",
+      "status": "missing",
+      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+    },
+    {
+      "name": "sigmoid",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Sigmoid"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable"
+      ],
+      "witness": {
+        "formula": "1 / (1 + exp(-x))",
+        "source": "paper-and-lowering",
+        "confidence": "explicit"
+      },
+      "notes": "Also appears inside repository training-oriented templates."
+    }
+  ],
+  "binaryOperations": [
+    {
+      "name": "add",
+      "display": "x + y",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Add"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_source_lowering_matches_native_reference"
+      ],
+      "witness": {
+        "formula": "x - (-y)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "subtract",
+      "display": "x - y",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Sub"],
+      "witness": {
+        "formula": "eml(ln(x), exp(y))",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "multiply",
+      "display": "x * y",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Mul"],
+      "witness": {
+        "formula": "exp(ln(x) + ln(y))",
+        "source": "paper-introduction-and-lowering",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "divide",
+      "display": "x / y",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Div"],
+      "witness": {
+        "formula": "x * (1 / y)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "pow",
+      "display": "pow(x, y)",
+      "category": "paper-basis",
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Pow"],
+      "testAnchors": [
+        "tests/reference_compare.rs:bytecode_and_tree_evaluation_agree"
+      ],
+      "witness": {
+        "formula": "exp(y * ln(x))",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
+    },
+    {
+      "name": "log_base",
+      "display": "log_x(y)",
+      "category": "paper-basis",
+      "status": "partial",
+      "notes": "Representable as log(y) / log(x), but not exposed as a dedicated AST entry."
+    },
+    {
+      "name": "avg",
+      "display": "avg(x, y)",
+      "category": "paper-basis",
+      "status": "partial",
+      "notes": "Representable as (x + y) / 2, but not exposed as a dedicated AST entry."
+    },
+    {
+      "name": "hypot",
+      "display": "hypot(x, y)",
+      "category": "paper-basis",
+      "status": "missing",
+      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+    }
+  ],
+  "repoExtensions": [
+    "softplus",
+    "swish",
+    "gelu_tanh",
+    "relu_soft",
+    "elu",
+    "leaky_relu",
+    "softsign",
+    "mish",
+    "softmax_template",
+    "cross_entropy_template",
+    "label_smoothing_cross_entropy_template",
+    "focal_loss_template",
+    "batch_training_templates",
+    "symbolic_derivative",
+    "portable_graph_export"
+  ]
+}

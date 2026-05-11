@@ -1,43 +1,181 @@
-# EML 论文要点与工程指导
+# EML 论文核心、工程约束与开发指引
 
-## 论文链接
+## 中文
+
+### 论文来源
+
 - arXiv: [All elementary functions from a single binary operator (v2)](https://arxiv.org/abs/2603.21852v2)
 - 作者代码仓库: [VA00/SymbolicRegressionPackage](https://github.com/VA00/SymbolicRegressionPackage)
 - 代码快照: [Zenodo 10.5281/zenodo.19183008](https://doi.org/10.5281/zenodo.19183008)
 
-## EML 核心定义
+### EML 核心定义
+
 - 二元算子定义: `eml(x, y) = exp(x) - ln(y)`
-- 论文中给出的统一语法（以常数 `1` 为终端）: `S -> 1 | eml(S, S)`
-- 关键示例:
+- 论文中的统一语法: `S -> 1 | eml(S, S)`
+- 编译到带输入变量的工程表达时，可把变量视作额外终端，但“纯 EML 形式”的终端仍只有常数 `1`
+- 关键构造示例:
   - `exp(x) = eml(x, 1)`
   - `ln(x) = eml(1, eml(eml(1, x), 1))`
 
-## 论文核心结论（用于工程决策）
-1. 在论文定义的“科学计算器基集”范围内，`eml + 常数 1` 可构造常见初等函数。
-2. 表达式可统一成同构二叉树，这对 IR 设计、编译和硬件映射非常有利。
-3. 计算需要复数中间量，且 `log` 分支选择会影响实轴行为，工程上必须显式定义策略。
-4. 纯 EML 形式具备表示统一性，但不等于执行最优；实际部署需要优化与重写。
+### 论文真正证明了什么
 
-## 对 eml-rs 的落地指导
+1. 论文证明的是一个具体“科学计算器基集”的完备性，不是对所有函数族的无条件完备性声明。
+2. 纯 EML 表达可统一为同构二叉树，这为 IR、枚举、重写、字节码化和硬件映射提供了统一结构。
+3. 实函数计算在工程上通常需要复数中间量；负实轴、零点和奇点附近的行为取决于 `log` 分支与特殊值语义。
+4. 论文的发现流程与执行流程不是一回事。搜索/发现依赖 bootstrapping 与外部验证，运行时系统则关注 lowering、执行和验证。
+5. 论文中的符号回归结果是 proof-of-concept，而不是“深树一定可训练”的工程承诺。盲恢复在深度 `5+` 显著退化。
 
-### 1) 模块边界建议
-- `core`: 原子算子 `eml` 与数值语义（domain、non-finite、分支策略）。
-- `ir`: 统一表达式树 `One / Var / Eml`，并提供 RPN 或字节码执行路径。
-- `verify`: 基于采样点的对照验证（与标准函数或外部后端比对）。
+### 对 eml-rs 的直接工程约束
 
-### 2) 验证优先级
-- 先验证基础恒等式（`exp`, `ln`）再扩展到组合表达式。
-- 样本需要覆盖:
-  - 正实轴（基础正确性）
-  - 负实轴及零邻域（分支与奇点行为）
-  - 复平面随机点（内部一致性）
+#### 1) 语义约束先于性能约束
 
-### 3) 性能路线
-- 第一阶段: 树解释执行 + RPN 栈执行，对比 native baseline。
-- 第二阶段: 常量折叠、CSE、子树重写降低 `exp/log` 调用数。
-- 第三阶段: 按目标后端（CPU/GPU/电路）做 lowering。
+- 任何后端都必须先服从同一数值语义，再讨论优化。
+- 因此 `core` 必须独占 `eml` 原子语义、`log` 分支策略和特殊值策略，不能把这些规则散落到 `ir`、`bytecode` 或 FFI 边界。
 
-### 4) 风险与边界
-- 论文结论针对特定基集，不应外推为“所有函数族自动可表达”。
-- `log` 分支与特殊浮点值处理（`inf/nan/signed zero`）不统一会导致跨平台差异。
-- 对实函数结果的断言应包含 `imag_tolerance`，避免误判。
+#### 2) 论文完备性不等于仓库已完整覆盖
+
+- 论文覆盖的是其 Table 1 所定义的科学计算器基集。
+- 当前仓库在此基础上实现了常见初等函数 lowering，并额外扩展了 AI 激活/损失模板。
+- 这意味着“仓库支持的函数族”分成两类:
+  - 论文基集内能力
+  - 仓库自行扩展的工程模板
+
+#### 3) 复数内部语义必须显式暴露
+
+- 论文明确指出内部计算需要复数域，并在负实轴附近面临分支符号问题。
+- 对应到仓库，`EvalPolicy`、`LogBranchPolicy`、`SpecialValuePolicy` 不是实现细节，而是论文语义的工程化接口。
+
+#### 4) 纯 EML 形式是统一表示，不是默认最优执行形态
+
+- 论文强调统一树结构的好处，但没有声称原样执行总是最快。
+- 因此本仓库必须保留 lowering、重写、CSE、字节码、并行策略与反降级路径，而不是把“纯 EML”误当成唯一交付形态。
+
+### 论文主张到代码结构的映射
+
+| 论文主张                     | 工程含义                                       | 当前落点                                                                |
+| ---------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
+| 单算子统一表达               | 需要统一 IR 与清晰的 lowering 边界             | `crates/eml-lowering`, `src/ir.rs`, `src/lowering.rs`                   |
+| 复数中间量不可避免           | 需要显式策略对象与跨后端一致语义               | `crates/eml-core/src/lib.rs`, `src/core.rs`, `src/ffi.rs`               |
+| 统一树便于搜索/执行/电路映射 | 需要 tree/RPN/bytecode 多执行形态              | `src/ir.rs`, `src/bytecode.rs`                                          |
+| 论文发现依赖外部验证         | 需要独立验证层，而不是把验证混进执行器         | `src/verify.rs`, `tests/reference_compare.rs`, `tests/cross_backend.rs` |
+| 统一表示不保证高性能         | 需要 rewrite、基准、门禁、反降级               | `src/opt.rs`, `benches/`, `benchmarks/`, `docs/interoperability.md`     |
+| SR 是 proof-of-concept       | 当前只应把 SR 视为研究入口，而不是核心交付承诺 | `examples/symbolic_regression_loop.rs`, `crates/eml-lowering`           |
+
+### 当前项目与论文已经对齐的部分
+
+1. 语义边界清晰。`eml-core` 负责数值内核，根 crate 负责 orchestration，符合“单算子统一语义、分层实现”的要求。
+2. 分支策略已显式化。`principal` 与 `corrected-real` 已进入 public policy surface，而不是藏在实现里。
+3. 验证层独立存在。tree、RPN、bytecode、参考后端之间的对照测试与采样验证已经成形。
+4. 统一表达没有被误读成“直接替代所有 kernel”。`scope`、`developer-guide` 与 `interoperability` 都保留了反降级方向。
+5. 论文启发的 SR 相关基础设施已有雏形。当前已有 `symbolic_derivative`、表达式简化、训练模板与示例环路。
+
+### 当前仍缺的“论文级”能力
+
+1. 缺少一份机器可读的“论文基集重建目录”。仓库能 lower/eval 很多函数，但没有把论文 Table 1 / 发现链条转成可消费资产。
+2. 缺少对论文“发现流程”的可复现层。当前 `verify` 证明的是数值一致性，不是 `VerifyBaseSet` 意义上的基集完备性回放。
+3. 缺少对“最短已知 EML 形式”或“见证公式”的治理。现在更像编译器项目，不像可审计的论文复现项目。
+4. 缺少以“树深度 / 恢复成功率 / snapping 成功率”为核心指标的 SR 实验面。当前示例更偏 API 演示。
+
+### 用这篇论文指导后续开发时的判断规则
+
+1. 新增函数或模板前，先判断它是“论文基集成员”还是“仓库扩展模板”。两者的文档与验收要求应区分。
+2. 任何语义改动，先检查负实轴、零点、非有限值与复数中间量，不要先谈性能。
+3. 任何优化改动，都不能把“统一表示”误改成“绑定某一后端特化语义”。
+4. 任何“更贴近论文”的开发，都应优先补可验证资产，而不是堆更多运行时技巧。
+
+### 建议的下一阶段开发方向
+
+1. 增加“论文基集资产层”: 把论文中的基础函数、见证公式、最短已知形式、适用域整理成 JSON 或 Markdown 索引。
+2. 增加“论文复现验证层”: 做一个轻量 Rust 版 completeness harness，至少能回放部分基集见证公式与发现链。
+3. 增加“SR 研究基准层”: 以树深、参数数、恢复成功率和数值稳定性为指标，独立于主执行基准。
+4. 保持“运行时系统”与“论文复现系统”分层，避免把搜索/发现逻辑塞进核心执行路径。
+
+### 对“是否要把论文核心提炼成单独 md 文件”的结论
+
+- 结论: 需要，但当前仓库已经有合适承载面，最佳做法不是新增平行摘要，而是把本文件升级为权威入口。
+- 原因:
+  - 新建第二份摘要容易和现有 `scope`、`architecture`、`developer-guide` 分叉。
+  - 论文对项目最有价值的不是“背景介绍”，而是“边界、风险、验证义务、非目标”。
+  - 这些内容最适合沉淀在一份开发时会被频繁引用的工程文档中。
+
+## English
+
+### Sources
+
+- arXiv: [All elementary functions from a single binary operator (v2)](https://arxiv.org/abs/2603.21852v2)
+- Author repository: [VA00/SymbolicRegressionPackage](https://github.com/VA00/SymbolicRegressionPackage)
+- Archival snapshot: [Zenodo 10.5281/zenodo.19183008](https://doi.org/10.5281/zenodo.19183008)
+
+### Core EML definition
+
+- Binary operator: `eml(x, y) = exp(x) - ln(y)`
+- Pure EML grammar in the paper: `S -> 1 | eml(S, S)`
+- For compiled expressions with variables, inputs can be treated as extra terminals, but the pure EML terminal basis still centers on the constant `1`
+- Canonical constructions:
+  - `exp(x) = eml(x, 1)`
+  - `ln(x) = eml(1, eml(eml(1, x), 1))`
+
+### What the paper actually proves
+
+1. The completeness claim is limited to the paper's concrete scientific-calculator basis, not to arbitrary function families.
+2. Pure EML expressions form uniform binary trees, which is valuable for IR design, rewriting, bytecode generation, and hardware mapping.
+3. Real-valued math typically requires complex intermediates internally; behavior near the negative real axis and singular points depends on log-branch and special-value policy.
+4. The discovery workflow and the execution workflow are different concerns. The paper's search process is not the same as a production lowering/evaluation pipeline.
+5. Symbolic-regression results in the paper are proof-of-concept, not a guarantee that deep EML trees are easy to train from random initialization.
+
+### Direct engineering constraints for eml-rs
+
+#### 1) Semantic constraints come before performance constraints
+
+- Every backend must implement the same numeric semantics before any optimization discussion.
+- `core` therefore owns `eml`, log-branch policy, and special-value policy instead of scattering those rules across executors.
+
+#### 2) Paper completeness is not the same as repository coverage
+
+- The paper covers its Table 1 scientific-calculator basis.
+- This repository implements many of those elementary functions and also adds AI-oriented activation/loss templates.
+- As a result, repository functionality splits into:
+  - paper-basis capabilities
+  - repository-specific engineering extensions
+
+#### 3) Complex-domain semantics must stay explicit
+
+- The paper explicitly relies on complex intermediates and highlights branch-sign issues.
+- In this repository, `EvalPolicy`, `LogBranchPolicy`, and `SpecialValuePolicy` are therefore part of the engineering contract, not implementation trivia.
+
+#### 4) Pure EML is a unifying representation, not a guaranteed optimal runtime form
+
+- The paper argues for uniform structure, not for always executing the raw form unchanged.
+- The repository must therefore keep lowering, rewriting, CSE, bytecode, parallel policy, and de-lowering as first-class tools.
+
+### Mapping paper claims to repository structure
+
+| Paper claim                                  | Engineering meaning                                                     | Current landing zone                                                    |
+| -------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Single-operator unification                  | Need a unified IR and explicit lowering boundary                        | `crates/eml-lowering`, `src/ir.rs`, `src/lowering.rs`                   |
+| Complex intermediates are unavoidable        | Need policy objects and cross-backend semantic consistency              | `crates/eml-core/src/lib.rs`, `src/core.rs`, `src/ffi.rs`               |
+| Uniform trees help search/execution/circuits | Need tree/RPN/bytecode execution forms                                  | `src/ir.rs`, `src/bytecode.rs`                                          |
+| Discovery relied on external verification    | Need an explicit verification layer, separate from executors            | `src/verify.rs`, `tests/reference_compare.rs`, `tests/cross_backend.rs` |
+| Uniformity does not imply speed              | Need rewrites, benchmarks, gates, and de-lowering                       | `src/opt.rs`, `benches/`, `benchmarks/`, `docs/interoperability.md`     |
+| SR is proof-of-concept                       | SR should remain a research-facing track, not a default product promise | `examples/symbolic_regression_loop.rs`, `crates/eml-lowering`           |
+
+### Where the project already aligns with the paper
+
+1. Semantic boundaries are clear: `eml-core` owns numeric meaning and the root crate owns orchestration.
+2. Branch policy is explicit and public rather than hidden inside evaluators.
+3. Verification is a separate layer with cross-backend and external-reference checks.
+4. The repository does not misread the paper as a demand to replace every native kernel.
+5. SR-related building blocks already exist, but remain appropriately research-scoped.
+
+### What is still missing at paper fidelity level
+
+1. A machine-readable catalog of the paper basis, witness formulas, and discovery chain.
+2. A reproducible completeness harness closer to `VerifyBaseSet`, instead of only runtime sample validation.
+3. Governance for shortest-known EML witnesses or audited constructions.
+4. A dedicated SR experiment surface centered on tree depth, recovery rate, snapping rate, and stability.
+
+### Decision for future development
+
+- Yes, the paper core should live in a dedicated Markdown document.
+- No, this repository does not need a second parallel summary file.
+- The better approach is to treat this file as the authoritative paper-to-engineering contract and keep `scope`, `architecture`, and `developer-guide` linked to it.

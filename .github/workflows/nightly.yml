@@ -16,6 +16,8 @@ on:
           - parallel-bench-only
           - quality-only
           - metrics-only
+          - paper-reproduction-only
+          - sr-research-only
 
 permissions:
   actions: read
@@ -34,6 +36,8 @@ jobs:
       bench_required: ${{ steps.detect.outputs.bench_required }}
       parallel_bench_required: ${{ steps.detect.outputs.parallel_bench_required }}
       metrics_required: ${{ steps.detect.outputs.metrics_required }}
+      paper_reproduction_required: ${{ steps.detect.outputs.paper_reproduction_required }}
+      sr_research_required: ${{ steps.detect.outputs.sr_research_required }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -80,16 +84,38 @@ jobs:
             "scripts/collect_metrics.py"
             "src/"
           )
+          paper_reproduction_patterns=(
+            ".github/workflows/nightly.yml"
+            "Cargo.toml"
+            "Cargo.lock"
+            "crates/"
+            "docs/paper-basis-catalog.json"
+            "docs/paper-basis-catalog.md"
+            "scripts/paper_reproduction_summary.py"
+            "src/"
+            "tests/paper_reproduction.rs"
+          )
+          sr_research_patterns=(
+            ".github/workflows/nightly.yml"
+            "docs/eml-paper-summary.md"
+            "docs/testing.md"
+            "examples/symbolic_regression_loop.rs"
+            "scripts/sr_research_benchmark.py"
+          )
 
           set_required() {
             echo "quality_required=$1" >> "$GITHUB_OUTPUT"
             echo "bench_required=$2" >> "$GITHUB_OUTPUT"
             echo "metrics_required=$3" >> "$GITHUB_OUTPUT"
             echo "parallel_bench_required=$4" >> "$GITHUB_OUTPUT"
+            echo "paper_reproduction_required=$5" >> "$GITHUB_OUTPUT"
+            echo "sr_research_required=$6" >> "$GITHUB_OUTPUT"
             echo "quality_required=$1"
             echo "bench_required=$2"
             echo "metrics_required=$3"
             echo "parallel_bench_required=$4"
+            echo "paper_reproduction_required=$5"
+            echo "sr_research_required=$6"
           }
 
           matches_any() {
@@ -108,11 +134,13 @@ jobs:
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             case "$TARGET" in
-              bench-only) set_required false true false false ;;
-              parallel-bench-only) set_required false false false true ;;
-              quality-only) set_required true false false false ;;
-              metrics-only) set_required false false true false ;;
-              *) set_required true true true true ;;
+              bench-only) set_required false true false false false false ;;
+              parallel-bench-only) set_required false false false true false false ;;
+              quality-only) set_required true false false false false false ;;
+              metrics-only) set_required false false true false false false ;;
+              paper-reproduction-only) set_required false false false false true false ;;
+              sr-research-only) set_required false false false false false true ;;
+              *) set_required true true true true true true ;;
             esac
             exit 0
           fi
@@ -131,13 +159,13 @@ jobs:
 
           if [[ -z "$previous_sha" ]]; then
             echo "No successful scheduled nightly run found; running all nightly jobs."
-            set_required true true true false
+            set_required true true true false true true
             exit 0
           fi
 
           if [[ "$previous_sha" == "$current_sha" ]]; then
             echo "Current commit already had a successful scheduled nightly run."
-            set_required false false false false
+            set_required false false false false false false
             exit 0
           fi
 
@@ -147,14 +175,14 @@ jobs:
 
           if ! git cat-file -e "${previous_sha}^{commit}" 2>/dev/null; then
             echo "Could not fetch previous successful nightly commit; running all nightly jobs."
-            set_required true true true false
+            set_required true true true false true true
             exit 0
           fi
 
           mapfile -t changed_files < <(git diff --name-only "$previous_sha" "$current_sha")
           if [[ "${#changed_files[@]}" -eq 0 ]]; then
             echo "No changed files since previous successful scheduled nightly run."
-            set_required false false false false
+            set_required false false false false false false
             exit 0
           fi
 
@@ -162,15 +190,19 @@ jobs:
           bench_required=false
           metrics_required=false
           parallel_bench_required=false
+          paper_reproduction_required=false
+          sr_research_required=false
           echo "Changed files since $previous_sha:"
           for path in "${changed_files[@]}"; do
             echo "  $path"
             matches_any "$path" "${quality_patterns[@]}" && quality_required=true
             matches_any "$path" "${bench_patterns[@]}" && bench_required=true
             matches_any "$path" "${metrics_patterns[@]}" && metrics_required=true
+            matches_any "$path" "${paper_reproduction_patterns[@]}" && paper_reproduction_required=true
+            matches_any "$path" "${sr_research_patterns[@]}" && sr_research_required=true
           done
 
-          set_required "$quality_required" "$bench_required" "$metrics_required" "$parallel_bench_required"
+          set_required "$quality_required" "$bench_required" "$metrics_required" "$parallel_bench_required" "$paper_reproduction_required" "$sr_research_required"
 
   nightly-quality:
     needs: changes
@@ -267,4 +299,54 @@ jobs:
         with:
           name: nightly-metrics
           path: target/eml-metrics.json
+          if-no-files-found: error
+
+  nightly-paper-reproduction:
+    needs: changes
+    if: needs.changes.outputs.paper_reproduction_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Replay paper-basis witness harness
+        run: cargo test --test paper_reproduction
+      - name: Summarize paper reproduction assets
+        run: |
+          python3 scripts/paper_reproduction_summary.py \
+            --output-json target/paper-reproduction-summary.json \
+            --output-md target/paper-reproduction-summary.md
+      - name: Upload paper reproduction summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-paper-reproduction-summary
+          path: |
+            target/paper-reproduction-summary.json
+            target/paper-reproduction-summary.md
+          if-no-files-found: error
+
+  nightly-sr-research:
+    needs: changes
+    if: needs.changes.outputs.sr_research_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run symbolic regression research benchmark
+        run: |
+          python3 scripts/sr_research_benchmark.py \
+            --samples 41 \
+            --steps 80 \
+            --output-json target/sr-research-benchmark.json \
+            --output-md target/sr-research-benchmark.md
+      - name: Upload symbolic regression research summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-sr-research-summary
+          path: |
+            target/sr-research-benchmark.json
+            target/sr-research-benchmark.md
           if-no-files-found: error

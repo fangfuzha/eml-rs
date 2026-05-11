@@ -184,6 +184,40 @@
 - [x] 实现 Bytecode batch 样本级并行执行（公共 API 已接入，并接入默认批量策略；独立 `parallel_bench` 与 Linux `parallel-bench-only` 显示 `batch256` 基本持平，`batch1024/4096` 收益明显）
 - [x] 将新的性能门槛写入 `benchmarks/gate.json`（基于 main 分支 Linux `bench-only` 结果收紧主 gate；并行实验基准仍保留在 `parallel_bench` 与 `parallel-bench-only`）
 
+## P18: 论文基集资产层
+
+- [x] 建立“论文基集目录”：按 Table 1 列出常量、一元函数、二元操作、定义域、仓库覆盖状态与对应测试入口
+- [x] 为代表性基础能力整理已知 EML 见证式与来源，至少覆盖 `exp`、`ln`、`+`、`-`、`*`、`/`、`pow`、三角/双曲函数族
+- [x] 在文档与测试命名上显式区分“论文基集能力”与“仓库扩展模板（AI activations/losses）”
+- [x] 产出机器可读资产（JSON 或 Markdown 索引），供 docs / tests / CLI / future gates 统一消费
+
+## P19: 论文复现验证层
+
+- [x] 增加轻量 `VerifyBaseSet` 风格 completeness harness，先回放代表性见证链，而不是直接做全量穷举搜索
+- [x] 为代表性论文见证公式建立独立回归测试，覆盖正实轴、负实轴、零邻域与复平面样本
+- [x] 建立“纯 EML 见证式 vs lowering 结果 vs source reference”的三方一致性验证
+- [x] 先接入非阻塞 CI artifact 与摘要输出，稳定后再决定是否升级为 gate
+
+## P20: 符号回归研究基准层
+
+- [x] 将 SR 实验从示例提升为独立研究面，固定树深 `2..6`、样本规模、初始化策略与 hardening 流程
+- [x] 记录 `recovery rate`、`snap-to-symbolic rate`、`NaN/overflow incidence`、`wall time` 等核心指标
+- [x] 将 SR 结果输出为机器可读 JSON 与 Markdown 摘要，保留 Linux 作为主验证平台
+- [x] 先建立 `workflow_dispatch` / nightly 非阻塞流程，不纳入主 CI 必过门禁
+
+## P21: 运行时与论文能力分层治理
+
+- [x] 在 public docs / tests / examples 中显式区分 `paper-basis` 与 `repo-extension`
+- [x] 为论文基集能力建立单独 acceptance checklist，避免与 AI 模板、运行时性能任务混在同一门禁中
+- [x] 将论文复现资产、运行时性能门禁、SR 实验结果拆成三条独立治理链路
+- [x] 评估是否为 `v0.2.0` 定义“论文复现可审计”版本目标
+
+## 后续执行顺序（冻结）
+
+- [x] 先完成 P18 再推进 P19；P20 在 P18 完成后可并行试验
+- [x] P19 / P20 稳定后，再考虑把其中一部分升级为阻断式 gate
+- [x] 后续性能优化只能在不破坏论文语义、复现资产与分层边界的前提下继续推进
+
 ## 决策清单（需要你确认后执行）
 
 - [x] D1 核心能力定位：`统一 IR/编译优化框架`

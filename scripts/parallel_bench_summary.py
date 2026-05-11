@@ -47,7 +47,8 @@ def median_winner(modes: Dict[str, Dict[str, float]]) -> str:
   return min(modes, key=lambda name: modes[name]["median"])
 
 
-def ranked_modes(modes: Dict[str, Dict[str, float]]) -> List[tuple[str, float]]:
+def ranked_modes(
+    modes: Dict[str, Dict[str, float]]) -> List[tuple[str, float]]:
   """Return modes sorted by median point estimate ascending."""
   return sorted(
       ((name, values["median"]) for name, values in modes.items()),
@@ -77,14 +78,19 @@ def collect_bytecode_modes(
     modes = {"off": off, "auto": auto, "force": force}
     ranking = ranked_modes(modes)
     out.append({
-        "batch_size": batch_size,
-        "off": off,
-        "auto": auto,
-        "force": force,
-        "median_winner": median_winner(modes),
+        "batch_size":
+        batch_size,
+        "off":
+        off,
+        "auto":
+        auto,
+        "force":
+        force,
+        "median_winner":
+        median_winner(modes),
         "median_ranking": [{
-          "mode": name,
-          "median": median,
+            "mode": name,
+            "median": median,
         } for name, median in ranking],
         "ratios": {
             "auto_vs_off_median": ratio(auto["median"], off["median"]),
@@ -104,47 +110,54 @@ def collect_bytecode_policy_analysis(
     best = ranking[0]
     second_best = ranking[1]
     batch_recommendations.append({
-        "batch_size": entry["batch_size"],
-        "recommended_mode": best["mode"],
-        "confidence": recommendation_confidence(best["median"],
-                                                  second_best["median"]),
-        "winner_margin_vs_second": ratio(best["median"],
-                                           second_best["median"]),
+        "batch_size":
+        entry["batch_size"],
+        "recommended_mode":
+        best["mode"],
+        "confidence":
+        recommendation_confidence(best["median"], second_best["median"]),
+        "winner_margin_vs_second":
+        ratio(best["median"], second_best["median"]),
     })
 
   auto_vs_off_small = bytecode_modes[0]["ratios"]["auto_vs_off_median"]
   auto_vs_off_mid = bytecode_modes[1]["ratios"]["auto_vs_off_median"]
   auto_vs_off_large = bytecode_modes[2]["ratios"]["auto_vs_off_median"]
-  keep_auto_default = (
-      auto_vs_off_small is not None and auto_vs_off_small <= 1.10 and
-      auto_vs_off_mid is not None and auto_vs_off_mid < 1.0 and
-      auto_vs_off_large is not None and auto_vs_off_large < 1.0)
-  default_reason = (
-      "keep-auto-default" if keep_auto_default else
-      "revisit-bytecode-auto-threshold")
+  keep_auto_default = (auto_vs_off_small is not None
+                       and auto_vs_off_small <= 1.10
+                       and auto_vs_off_mid is not None
+                       and auto_vs_off_mid < 1.0
+                       and auto_vs_off_large is not None
+                       and auto_vs_off_large < 1.0)
+  default_reason = ("keep-auto-default" if keep_auto_default else
+                    "revisit-bytecode-auto-threshold")
 
   return {
-    "configured_default": {
-      "mode": "auto",
-      "workers_cap": BYTECODE_AUTO_MAX_WORKERS,
-      "min_samples_per_worker": BYTECODE_AUTO_MIN_SAMPLES_PER_WORKER,
-    },
-    "batch_median_winners": [{
-      "batch_size": entry["batch_size"],
-      "winner": entry["median_winner"],
-    } for entry in bytecode_modes],
-    "batch_recommendations": batch_recommendations,
-    "default_policy_recommendation": {
-      "recommended_mode":
-      "auto" if keep_auto_default else batch_recommendations[-1]["recommended_mode"],
-      "keep_configured_default": keep_auto_default,
-      "reason": default_reason,
-      "evidence": {
-        "auto_vs_off_batch256": auto_vs_off_small,
-        "auto_vs_off_batch1024": auto_vs_off_mid,
-        "auto_vs_off_batch4096": auto_vs_off_large,
+      "configured_default": {
+          "mode": "auto",
+          "workers_cap": BYTECODE_AUTO_MAX_WORKERS,
+          "min_samples_per_worker": BYTECODE_AUTO_MIN_SAMPLES_PER_WORKER,
       },
-    },
+      "batch_median_winners": [{
+          "batch_size": entry["batch_size"],
+          "winner": entry["median_winner"],
+      } for entry in bytecode_modes],
+      "batch_recommendations":
+      batch_recommendations,
+      "default_policy_recommendation": {
+          "recommended_mode":
+          "auto" if keep_auto_default else
+          batch_recommendations[-1]["recommended_mode"],
+          "keep_configured_default":
+          keep_auto_default,
+          "reason":
+          default_reason,
+          "evidence": {
+              "auto_vs_off_batch256": auto_vs_off_small,
+              "auto_vs_off_batch1024": auto_vs_off_mid,
+              "auto_vs_off_batch4096": auto_vs_off_large,
+          },
+      },
   }
 
 
@@ -167,6 +180,8 @@ def collect_parallel_thresholds(
           ratio(auto["median"], serial["median"]),
       })
   return out
+
+
 def build_summary(criterion_dir: pathlib.Path) -> Dict[str, Any]:
   """Build a full summary from Criterion output directories.
 
@@ -183,7 +198,8 @@ def build_summary(criterion_dir: pathlib.Path) -> Dict[str, Any]:
       "generated_at": datetime.now(timezone.utc).isoformat(),
       "criterion_dir": str(criterion_dir),
       "bytecode_modes": bytecode_modes,
-      "bytecode_policy_analysis": collect_bytecode_policy_analysis(bytecode_modes),
+      "bytecode_policy_analysis":
+      collect_bytecode_policy_analysis(bytecode_modes),
       "parallel_thresholds": collect_parallel_thresholds(benchmarks),
   }
 
@@ -200,6 +216,8 @@ def load_summary(path: pathlib.Path) -> Dict[str, Any]:
   if not path.exists():
     raise SystemExit(f"missing summary file: {path}")
   return json.loads(path.read_text(encoding="utf-8"))
+
+
 def format_policy_recommendation(summary: Dict[str, Any]) -> List[str]:
   """Render a concise human-readable recommendation block."""
   analysis = summary["bytecode_policy_analysis"]
@@ -222,6 +240,8 @@ def format_policy_recommendation(summary: Dict[str, Any]) -> List[str]:
       f"{default_recommendation['reason']} keep={default_recommendation['keep_configured_default']} "
       f"recommended_mode={default_recommendation['recommended_mode']}")
   return lines
+
+
 def validate_policy_recommendation(
     summary: Dict[str, Any],
     require_keep_configured_default: bool,
@@ -237,7 +257,8 @@ def validate_policy_recommendation(
   Returns:
     Process exit code. Zero means validation passed.
   """
-  recommended = summary["bytecode_policy_analysis"]["default_policy_recommendation"]
+  recommended = summary["bytecode_policy_analysis"][
+      "default_policy_recommendation"]
 
   if require_keep_configured_default and not recommended[
       "keep_configured_default"]:

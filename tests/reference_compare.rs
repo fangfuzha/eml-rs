@@ -45,7 +45,7 @@ fn finite_diff_real(
 }
 
 #[test]
-fn eml_exp_matches_complex_exp() {
+fn paper_basis_eml_exp_matches_complex_exp() {
     let expr = Expr::exp(Expr::var(0));
     let samples = vec![
         vec![Complex64::new(-2.0, 0.0)],
@@ -59,7 +59,7 @@ fn eml_exp_matches_complex_exp() {
 }
 
 #[test]
-fn eml_log_formula_matches_real_ln() {
+fn paper_basis_eml_log_formula_matches_real_ln() {
     let expr = Expr::ln(Expr::var(0));
     let samples = vec![
         vec![0.1],
@@ -131,7 +131,7 @@ fn relaxed_backend_comparison_accepts_matching_non_finite_outputs() {
 }
 
 #[test]
-fn source_lowering_matches_native_reference() {
+fn paper_basis_source_lowering_matches_native_reference() {
     let source = parse_source_expr("exp(x0) + sin(x1) / cos(x1)").unwrap();
     let optimized = optimize_for_lowering(&source);
     assert!(estimate_cost(&optimized).score <= estimate_cost(&source).score);
@@ -158,7 +158,7 @@ fn corrected_real_branch_can_be_selected() {
 }
 
 #[test]
-fn extended_elementary_functions_match_reference() {
+fn paper_basis_extended_elementary_functions_match_reference() {
     let source = parse_source_expr("tan(x0) + sinh(x0) + cosh(x0) + atan(x0) + sqrt(x1)").unwrap();
     let expr = lower_to_eml(&source).unwrap();
     let vars = vec![Complex64::new(0.2, 0.1), Complex64::new(1.4, -0.2)];
@@ -172,7 +172,7 @@ fn extended_elementary_functions_match_reference() {
 }
 
 #[test]
-fn ai_training_function_family_is_lowerable_and_evaluable() {
+fn paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable() {
     let source =
         parse_source_expr("sigmoid(x0) + softplus(x0) + swish(x0) + gelu(x0) + relu(x0)").unwrap();
     let expr = lower_to_eml(&source).unwrap();
@@ -187,7 +187,7 @@ fn ai_training_function_family_is_lowerable_and_evaluable() {
 }
 
 #[test]
-fn added_activation_family_is_lowerable_and_evaluable() {
+fn repo_extension_added_activation_family_is_lowerable_and_evaluable() {
     let source =
         parse_source_expr("elu(x0) + leaky_relu(x0,0.05) + softsign(x0) + mish(x0)").unwrap();
     let expr = lower_to_eml(&source).unwrap();
@@ -202,7 +202,7 @@ fn added_activation_family_is_lowerable_and_evaluable() {
 }
 
 #[test]
-fn softmax_cross_entropy_vector_templates_are_lowerable() {
+fn repo_extension_softmax_cross_entropy_vector_templates_are_lowerable() {
     let logits = vec![
         parse_source_expr("x0").unwrap(),
         parse_source_expr("x1 + 1").unwrap(),
@@ -224,7 +224,7 @@ fn softmax_cross_entropy_vector_templates_are_lowerable() {
 }
 
 #[test]
-fn symbolic_derivative_matches_finite_difference() {
+fn repo_extension_symbolic_derivative_matches_finite_difference() {
     let source = parse_source_expr("softplus(x0) + mish(x0)").unwrap();
     let deriv = symbolic_derivative(&source, 0);
     let vars = [Complex64::new(0.35, 0.0)];
@@ -234,7 +234,7 @@ fn symbolic_derivative_matches_finite_difference() {
 }
 
 #[test]
-fn batch_cross_entropy_mean_template_is_lowerable() {
+fn repo_extension_batch_cross_entropy_mean_template_is_lowerable() {
     let batch_logits = vec![
         vec![
             parse_source_expr("x0").unwrap(),
@@ -267,7 +267,7 @@ fn batch_cross_entropy_mean_template_is_lowerable() {
 }
 
 #[test]
-fn delowering_backend_preserves_lowered_semantics() {
+fn repo_extension_delowering_backend_preserves_lowered_semantics() {
     let source = parse_source_expr("sigmoid(x0) + softplus(x1) - log(x2 + 3)").unwrap();
     let lowered = lower_to_lowered_eml(&source).unwrap();
     let raised = delower_to_source(&lowered);
@@ -282,7 +282,7 @@ fn delowering_backend_preserves_lowered_semantics() {
 }
 
 #[test]
-fn batch_label_smoothing_and_focal_templates_are_lowerable() {
+fn repo_extension_batch_label_smoothing_and_focal_templates_are_lowerable() {
     let batch_logits = vec![
         vec![
             parse_source_expr("x0").unwrap(),
@@ -332,7 +332,7 @@ fn batch_label_smoothing_and_focal_templates_are_lowerable() {
 }
 
 #[test]
-fn symbolic_derivative_keeps_tree_compact_for_power() {
+fn repo_extension_symbolic_derivative_keeps_tree_compact_for_power() {
     let source = parse_source_expr("x0^8").unwrap();
     let deriv = symbolic_derivative(&source, 0);
     assert!(source_expr_node_count(&deriv) <= 12, "{deriv:?}");

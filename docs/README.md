@@ -1,7 +1,11 @@
 # Docs Index / 文档索引
 
 ## 中文
-- `eml-paper-summary.md`: 论文摘要与工程指导
+
+- `eml-paper-summary.md`: 论文核心、工程约束与开发指引
+- `paper-basis-catalog.md`: 论文 Table 1 基集目录、仓库覆盖状态与缺口
+- `paper-basis-catalog.json`: 论文基集的机器可读索引，供脚本和未来 gate 消费
+- `testing.md`: 测试矩阵、论文复现 harness、性能/研究 artifact 入口
 - `scope.md`: 范围声明
 - `acceptance.md`: 验收标准
 - `architecture.md`: 分层架构、跨层规则、API 层级
@@ -19,7 +23,11 @@
 - `releases/`: 按版本冻结的发布文档快照
 
 ## English
-- `eml-paper-summary.md`: paper summary and engineering mapping
+
+- `eml-paper-summary.md`: paper core, engineering constraints, and development guidance
+- `paper-basis-catalog.md`: paper Table 1 basis catalog, repository coverage, and gaps
+- `paper-basis-catalog.json`: machine-readable paper-basis index for scripts and future gates
+- `testing.md`: test matrix, paper reproduction harness, and performance/research artifact entry points
 - `scope.md`: scope statement
 - `acceptance.md`: acceptance criteria
 - `architecture.md`: layers, cross-layer rules, API tiers
