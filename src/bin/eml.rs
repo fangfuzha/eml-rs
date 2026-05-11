@@ -2,9 +2,7 @@ use std::env;
 use std::fs;
 use std::process;
 
-use eml_rs::api::{
-    BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions,
-};
+use eml_rs::api::{BuiltinBackend, BytecodeBatchParallelism, PipelineBuilder, PipelineOptions};
 use eml_rs::core::EvalPolicy;
 use eml_rs::lowering::{
     eval_source_expr_complex, lower_to_eml, parse_source_expr, source_expr_node_count, SourceExpr,
@@ -61,9 +59,7 @@ fn parse_usize_arg(args: &[String], flag: &str) -> Result<Option<usize>, String>
         .transpose()
 }
 
-fn parse_bytecode_batch_parallelism(
-    args: &[String],
-) -> Result<BytecodeBatchParallelism, String> {
+fn parse_bytecode_batch_parallelism(args: &[String]) -> Result<BytecodeBatchParallelism, String> {
     let mode = arg_value(args, "--bytecode-parallel").unwrap_or_else(|| "auto".to_string());
     let workers = parse_usize_arg(args, "--bytecode-workers")?;
     let min_samples = parse_usize_arg(args, "--bytecode-min-samples-per-worker")?;
