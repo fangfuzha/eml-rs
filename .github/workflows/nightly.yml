@@ -233,6 +233,9 @@ jobs:
         run: cargo bench --bench parallel_bench
       - name: Summarize parallel benchmark results
         run: python3 scripts/parallel_bench_summary.py --criterion-dir target/criterion --output target/parallel-bench-summary.json --print-recommendation
+      - name: Check parallel benchmark recommendation (non-blocking)
+        continue-on-error: true
+        run: python3 scripts/parallel_bench_summary.py --input-summary target/parallel-bench-summary.json --print-recommendation --require-keep-configured-default --require-default-mode auto
       - name: Upload parallel benchmark summary
         uses: actions/upload-artifact@v7
         with:
