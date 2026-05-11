@@ -230,11 +230,11 @@
 
 ## P24: 符号回归研究面增强
 
-- [ ] 将 `scripts/sr_research_benchmark.py` 的固定模板扩展为多目标任务集：`exp-log` 模板、三角模板、低阶多项式模板
-- [ ] 为 SR benchmark 增加多 seed 重复试验，输出均值、方差、最优/最差 run 与失败样本摘要
-- [ ] 增加 snapping 规则说明：参数容差、表达式等价判断、数值等价采样域与不可判定状态
-- [ ] 将 SR JSON schema 与 Markdown 摘要写入 `docs/testing.md` 或独立研究文档，避免脚本输出成为隐式协议
-- [ ] 保持 SR 结果为 nightly / workflow_dispatch 非阻断 artifact，不与 runtime 性能 gate 混合
+- [x] 将 `scripts/sr_research_benchmark.py` 的固定模板扩展为多目标任务集：`exp-log` 模板、三角模板、低阶多项式模板
+- [x] 为 SR benchmark 增加多 seed 重复试验，输出均值、方差、最优/最差 run 与失败样本摘要
+- [x] 增加 snapping 规则说明：参数容差、表达式等价判断、数值等价采样域与不可判定状态
+- [x] 将 SR JSON schema 与 Markdown 摘要写入 `docs/testing.md` 或独立研究文档，避免脚本输出成为隐式协议
+- [x] 保持 SR 结果为 nightly / workflow_dispatch 非阻断 artifact，不与 runtime 性能 gate 混合
 
 ## P25: `v0.2.0` 论文复现可审计准备
 

@@ -52,10 +52,13 @@
 
 ### 符号回归研究基准
 
-- `scripts/sr_research_benchmark.py` 是 P20 的独立研究面，固定深度 `2..6`、样本规模、初始化策略与 hardening 参数。
-- 输出指标包括 `recovery_rate`、`snap_to_symbolic_rate`、`nan_overflow_incidence` 与 `wall_time_ms`。
-- 默认产物是 `target/sr-research-benchmark.json` 与 `target/sr-research-benchmark.md`。
-- Linux nightly / `workflow_dispatch` 上传该产物作为非阻断 artifact，不纳入主 CI 必过门禁。
+- `scripts/sr_research_benchmark.py` 是 P20/P24 的独立研究面，当前覆盖 `exp-log`、三角模板、低阶多项式模板三个固定任务族。
+- 默认深度桶仍为 `2..6`，但每个任务会对 seed 集合重复试验，并按任务和全局两个层级聚合结果。
+- schema 已升级为 `eml-rs.sr-research-benchmark.v2`；JSON 同时包含 `tasks`、`task_metrics`、逐 run `runs`、`failure_summary` 与 `snapping_rules`，避免脚本输出成为隐式协议。
+- 聚合指标包括 `recovery_rate`、`snap_to_symbolic_rate`、`final_loss_mean/variance`、`param_rmse_mean/variance`、`nan_overflow_incidence_mean/variance` 与 `wall_time_ms_mean/variance`，并给出 best/worst run 与失败样本摘要。
+- snapping 规则显式区分：参数近似阈值 `param_rmse <= 0.20`、数值等价采样域 `x in [-2, 2]`、最大绝对误差阈值 `1e-3`、以及“数值等价但参数未对齐”的 `numerically-equivalent-indeterminate` 状态。
+- 默认产物仍是 `target/sr-research-benchmark.json` 与 `target/sr-research-benchmark.md`。
+- Linux nightly / `workflow_dispatch` 继续上传该产物作为非阻断 artifact，不纳入主 CI 必过门禁，也不与 runtime 性能 gate 混合。
 
 ### 依赖安全与许可证
 
@@ -114,10 +117,13 @@
 
 ### Symbolic Regression Research Benchmark
 
-- `scripts/sr_research_benchmark.py` is the independent P20 research surface with fixed depths `2..6`, sample size, initialization policy, and hardening parameters.
-- Reported metrics include `recovery_rate`, `snap_to_symbolic_rate`, `nan_overflow_incidence`, and `wall_time_ms`.
-- Default artifacts are `target/sr-research-benchmark.json` and `target/sr-research-benchmark.md`.
-- Linux nightly / `workflow_dispatch` uploads these artifacts as non-blocking research outputs and does not include them in the required main CI gate.
+- `scripts/sr_research_benchmark.py` is the independent P20/P24 research surface and now covers three fixed task families: `exp-log`, trigonometric, and low-order polynomial templates.
+- The default depth buckets remain `2..6`, but each task now repeats across a seed set and reports both per-task and cross-task aggregates.
+- The schema is now `eml-rs.sr-research-benchmark.v2`; the JSON artifact explicitly records `tasks`, `task_metrics`, per-run `runs`, `failure_summary`, and `snapping_rules` so the output is a documented contract instead of an implicit script byproduct.
+- Aggregate metrics include `recovery_rate`, `snap_to_symbolic_rate`, `final_loss_mean/variance`, `param_rmse_mean/variance`, `nan_overflow_incidence_mean/variance`, and `wall_time_ms_mean/variance`, plus best/worst runs and failed-run examples.
+- The snapping policy now distinguishes parameter closeness `param_rmse <= 0.20`, numerical equivalence over `x in [-2, 2]`, a max absolute error threshold of `1e-3`, and the `numerically-equivalent-indeterminate` state for numerically matched but parameter-divergent runs.
+- Default artifacts remain `target/sr-research-benchmark.json` and `target/sr-research-benchmark.md`.
+- Linux nightly / `workflow_dispatch` continues to upload these artifacts as non-blocking research outputs and keeps them separate from the required runtime-performance gate.
 
 ### Dependency Security And Licensing
 
