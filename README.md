@@ -20,6 +20,7 @@
 - 文档索引 / Docs index: `docs/README.md`
 - 论文摘要与工程指导: `docs/eml-paper-summary.md`
 - 论文基集目录 / Paper-basis catalog: `docs/paper-basis-catalog.md`
+- 论文复现 release 草案 / Paper-reproduction release draft: `docs/releases/v0.2.0/README.md`
 - 范围声明 / Scope: `docs/scope.md`
 - 验收标准 / Acceptance: `docs/acceptance.md`
 - 架构设计 / Architecture: `docs/architecture.md`
@@ -96,11 +97,14 @@
 ### 4.1 Paper-basis 初等函数（已实现 lowering）
 
 - `+ - * / pow exp log`
+- `asinh acosh atanh hypot`
 - `sin cos tan`
 - `sinh cosh tanh`
 - `asin acos atan`
 - `sqrt`
 - `sigmoid`（论文基集成员，同时也可服务训练模板）
+
+说明：`half`、`inv`、`sqr`、`avg`、`log_x` 现通过公开命名入口解析为组合表达，并继续按 `paper-basis` 治理，而不是扩成新的核心运行时语义节点。完整 witness、测试锚点与覆盖状态以 `docs/paper-basis-catalog.md` / `docs/paper-basis-catalog.json` 为准。
 
 ### 4.2 Repo-extension AI 常见函数（模板/近似）
 
@@ -164,6 +168,14 @@ cargo run --bin eml -- profile "exp(x0) - log(x1)" --sample-count 32
 ```
 
 更多命令见 `docs/cli.md`。
+
+### 5.5 论文复现与研究 artifact 入口
+
+- 查看 `docs/paper-basis-catalog.md` / `docs/paper-basis-catalog.json` 了解论文基集覆盖状态、witness 与测试锚点。
+- 运行 `cargo test --test paper_reproduction` 回放代表性 paper-basis witness。
+- 运行 `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` 生成论文复现摘要 artifact。
+- 运行 `python scripts/sr_research_benchmark.py --output-json target/sr-research-benchmark.json --output-md target/sr-research-benchmark.md` 生成符号回归研究 artifact。
+- 发布前审阅入口见 `docs/releases/v0.2.0/README.md`。
 
 ### 5.4 C ABI 示例
 

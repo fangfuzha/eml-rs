@@ -35,6 +35,12 @@ println!("{value}");
 3. 需要研究统一 IR 时，直接操作 `Expr` 与 `BytecodeProgram`。
 4. 需要可信对照时，用 `verify` 模块或 `CompiledPipeline::verify_*`。
 
+### 论文复现入口
+- 查看 `docs/paper-basis-catalog.md` 获取论文基集能力、witness 与覆盖状态；脚本和 gate 以 `docs/paper-basis-catalog.json` 为事实源。
+- 使用 `cargo test --test paper_reproduction` 回放代表性 witness，验证 pure EML / lowering / source reference 三方一致性。
+- 使用 `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` 生成可审阅摘要。
+- 若要了解当前发布准备范围与非目标，直接看 `docs/releases/v0.2.0/README.md` 与 `docs/releases/v0.2.0/release-notes.md`。
+
 ### API 分层
 - Stable API：默认选择 `compile()`、`PipelineBuilder`、`CompiledPipeline`、`BuiltinBackend`、`PipelineOptions`、`error::*`、`core::EvalPolicy`。
 - Experimental API：研究时可使用 `ir`、`bytecode`、`lowering`、`opt`、`verify`、`profiling`、`plugin`，但升级前要阅读 release notes。
@@ -94,6 +100,12 @@ println!("{value}");
 2. Drop to `SourceExpr` when you need pre-lowering rewrites.
 3. Drop to `Expr` and `BytecodeProgram` when researching unified IR execution.
 4. Use `verify` or `CompiledPipeline::verify_*` for trusted comparisons.
+
+### Paper-Reproduction Entry Points
+- Read `docs/paper-basis-catalog.md` for the paper-basis capability list, witnesses, and coverage status; scripts and future gates use `docs/paper-basis-catalog.json` as the source of truth.
+- Run `cargo test --test paper_reproduction` to replay representative witnesses across pure EML, lowering, and source reference.
+- Run `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` to generate the auditable summary artifact.
+- For the current release-preparation scope and non-goals, read `docs/releases/v0.2.0/README.md` and `docs/releases/v0.2.0/release-notes.md`.
 
 ### API Tiers
 - Stable API: default to `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, and `core::EvalPolicy`.

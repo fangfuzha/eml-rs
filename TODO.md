@@ -238,11 +238,11 @@
 
 ## P25: `v0.2.0` 论文复现可审计准备
 
-- [ ] 定义 `v0.2.0` 范围：paper-basis catalog schema、代表性 witness replay、P22 缺口处理状态、artifact 审计链路
-- [ ] 新建 `docs/releases/v0.2.0/` 草案，记录本阶段论文复现资产、已知缺口、非目标与升级 gate 决策
-- [ ] 增加 release 前检查清单：`cargo test --all-targets`、paper reproduction summary、SR research summary、nightly artifact 可下载性
-- [ ] 更新 README / user-guide / developer-guide 中的 `paper-basis` 入口，确保使用者能从首页找到复现资产
-- [ ] 在发布说明中明确 `repo-extension` 训练模板仍是工程扩展，不作为论文 Table 1 完备性声明的一部分
+- [x] 定义 `v0.2.0` 范围：paper-basis catalog schema、代表性 witness replay、P22 缺口处理状态、artifact 审计链路
+- [x] 新建 `docs/releases/v0.2.0/` 草案，记录本阶段论文复现资产、已知缺口、非目标与升级 gate 决策
+- [x] 增加 release 前检查清单：`cargo test --all-targets`、paper reproduction summary、SR research summary、nightly artifact 可下载性
+- [x] 更新 README / user-guide / developer-guide 中的 `paper-basis` 入口，确保使用者能从首页找到复现资产
+- [x] 在发布说明中明确 `repo-extension` 训练模板仍是工程扩展，不作为论文 Table 1 完备性声明的一部分
 
 ## 后续执行顺序（P22+）
 

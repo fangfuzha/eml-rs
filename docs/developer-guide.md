@@ -26,6 +26,8 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - lowering 问题：先看 `eml-lowering` 与 `opt`。
 - 运行时不一致：对照 `tree / RPN / bytecode`。
 - 性能回退：先跑 `criterion`，再过 `bench_gate.py`。
+- 论文复现治理问题：先看 `docs/paper-basis-catalog.json`、`tests/paper_reproduction.rs`、`scripts/paper_reproduction_summary.py`。
+- SR 研究 artifact 问题：先看 `scripts/sr_research_benchmark.py` 与 `docs/testing.md` 中记录的 schema / snapping 规则。
 
 ### 贡献建议
 
@@ -40,6 +42,7 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - 验收标准见 `docs/acceptance.md`
 - 版本与兼容策略见 `docs/versioning.md`
 - 质量矩阵见 `docs/testing.md`
+- `v0.2.0` 发布准备草案见 `docs/releases/v0.2.0/README.md`
 - 维护与安全响应见 `CONTRIBUTING.md` / `SECURITY.md`
 
 ## English
@@ -68,6 +71,8 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - Lowering issues: inspect `eml-lowering` and `opt`.
 - Runtime mismatches: compare `tree / RPN / bytecode`.
 - Performance regressions: run `criterion`, then validate through `bench_gate.py`.
+- Paper-reproduction governance issues: start from `docs/paper-basis-catalog.json`, `tests/paper_reproduction.rs`, and `scripts/paper_reproduction_summary.py`.
+- SR research artifact issues: inspect `scripts/sr_research_benchmark.py` together with the schema and snapping rules documented in `docs/testing.md`.
 
 ### Contribution Guidance
 
@@ -82,4 +87,5 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - Acceptance criteria: `docs/acceptance.md`
 - Versioning and compatibility: `docs/versioning.md`
 - Quality matrix: `docs/testing.md`
+- `v0.2.0` release-preparation draft: `docs/releases/v0.2.0/README.md`
 - Maintenance and security response: `CONTRIBUTING.md` / `SECURITY.md`

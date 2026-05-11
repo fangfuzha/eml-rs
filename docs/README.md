@@ -5,6 +5,7 @@
 - `eml-paper-summary.md`: 论文核心、工程约束与开发指引
 - `paper-basis-catalog.md`: 论文 Table 1 基集目录、仓库覆盖状态与缺口
 - `paper-basis-catalog.json`: 论文基集的机器可读索引，供脚本和未来 gate 消费
+- `releases/v0.2.0/README.md`: `v0.2.0` 论文复现可审计准备草案入口
 - `testing.md`: 测试矩阵、论文复现 harness、性能/研究 artifact 入口
 - `scope.md`: 范围声明
 - `acceptance.md`: 验收标准
@@ -27,6 +28,7 @@
 - `eml-paper-summary.md`: paper core, engineering constraints, and development guidance
 - `paper-basis-catalog.md`: paper Table 1 basis catalog, repository coverage, and gaps
 - `paper-basis-catalog.json`: machine-readable paper-basis index for scripts and future gates
+- `releases/v0.2.0/README.md`: entry point for the `v0.2.0` auditable paper-reproduction draft
 - `testing.md`: test matrix, paper reproduction harness, and performance/research artifact entry points
 - `scope.md`: scope statement
 - `acceptance.md`: acceptance criteria
