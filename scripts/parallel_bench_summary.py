@@ -167,6 +167,39 @@ def collect_parallel_thresholds(
           ratio(auto["median"], serial["median"]),
       })
   return out
+def build_summary(criterion_dir: pathlib.Path) -> Dict[str, Any]:
+  """Build a full summary from Criterion output directories.
+
+  Args:
+    criterion_dir: Root directory containing Criterion benchmark outputs.
+
+  Returns:
+    A machine-readable summary dictionary for the parallel benchmark suite.
+  """
+  benchmarks = collect_estimates(criterion_dir)
+  bytecode_modes = collect_bytecode_modes(benchmarks)
+  return {
+      "schema_version": 1,
+      "generated_at": datetime.now(timezone.utc).isoformat(),
+      "criterion_dir": str(criterion_dir),
+      "bytecode_modes": bytecode_modes,
+      "bytecode_policy_analysis": collect_bytecode_policy_analysis(bytecode_modes),
+      "parallel_thresholds": collect_parallel_thresholds(benchmarks),
+  }
+
+
+def load_summary(path: pathlib.Path) -> Dict[str, Any]:
+  """Load an existing parallel benchmark summary JSON file.
+
+  Args:
+    path: Path to the existing summary JSON file.
+
+  Returns:
+    Parsed summary dictionary.
+  """
+  if not path.exists():
+    raise SystemExit(f"missing summary file: {path}")
+  return json.loads(path.read_text(encoding="utf-8"))
 def format_policy_recommendation(summary: Dict[str, Any]) -> List[str]:
   """Render a concise human-readable recommendation block."""
   analysis = summary["bytecode_policy_analysis"]
@@ -189,12 +222,46 @@ def format_policy_recommendation(summary: Dict[str, Any]) -> List[str]:
       f"{default_recommendation['reason']} keep={default_recommendation['keep_configured_default']} "
       f"recommended_mode={default_recommendation['recommended_mode']}")
   return lines
+def validate_policy_recommendation(
+    summary: Dict[str, Any],
+    require_keep_configured_default: bool,
+    require_default_mode: str | None,
+) -> int:
+  """Validate summary recommendations against lightweight policy expectations.
+
+  Args:
+    summary: Parsed summary dictionary.
+    require_keep_configured_default: Whether the configured default must remain recommended.
+    require_default_mode: Optional required recommended mode.
+
+  Returns:
+    Process exit code. Zero means validation passed.
+  """
+  recommended = summary["bytecode_policy_analysis"]["default_policy_recommendation"]
+
+  if require_keep_configured_default and not recommended[
+      "keep_configured_default"]:
+    print(
+        "configured default policy is no longer recommended",
+        file=sys.stderr,
+    )
+    return 1
+  if require_default_mode and recommended[
+      "recommended_mode"] != require_default_mode:
+    print(
+        "recommended default mode mismatch: "
+        f"expected {require_default_mode}, got {recommended['recommended_mode']}",
+        file=sys.stderr,
+    )
+    return 1
+  return 0
 
 
 def main() -> int:
   parser = argparse.ArgumentParser()
-  parser.add_argument("--criterion-dir", required=True)
-  parser.add_argument("--output", required=True)
+  parser.add_argument("--criterion-dir")
+  parser.add_argument("--output")
+  parser.add_argument("--input-summary")
   parser.add_argument("--print-recommendation", action="store_true")
   parser.add_argument("--require-keep-configured-default", action="store_true")
   parser.add_argument(
@@ -203,50 +270,33 @@ def main() -> int:
   )
   args = parser.parse_args()
 
-  criterion_dir = pathlib.Path(args.criterion_dir)
-  output_path = pathlib.Path(args.output)
-  if not criterion_dir.exists():
-    raise SystemExit(f"missing criterion directory: {criterion_dir}")
+  if args.input_summary:
+    summary = load_summary(pathlib.Path(args.input_summary))
+  else:
+    if not args.criterion_dir or not args.output:
+      raise SystemExit(
+          "either --input-summary or both --criterion-dir and --output are required"
+      )
+    criterion_dir = pathlib.Path(args.criterion_dir)
+    if not criterion_dir.exists():
+      raise SystemExit(f"missing criterion directory: {criterion_dir}")
+    summary = build_summary(criterion_dir)
+    output_path = pathlib.Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(summary, indent=2, sort_keys=True),
+                           encoding="utf-8")
 
-  benchmarks = collect_estimates(criterion_dir)
-  bytecode_modes = collect_bytecode_modes(benchmarks)
-  summary = {
-      "schema_version": 1,
-      "generated_at": datetime.now(timezone.utc).isoformat(),
-      "criterion_dir": str(criterion_dir),
-      "bytecode_modes": bytecode_modes,
-      "bytecode_policy_analysis":
-      collect_bytecode_policy_analysis(bytecode_modes),
-      "parallel_thresholds": collect_parallel_thresholds(benchmarks),
-  }
-
-  output_path.parent.mkdir(parents=True, exist_ok=True)
-  output_path.write_text(json.dumps(summary, indent=2, sort_keys=True),
-                         encoding="utf-8")
   print(json.dumps(summary, indent=2, sort_keys=True))
 
   if args.print_recommendation:
     for line in format_policy_recommendation(summary):
       print(line)
 
-  recommended = summary["bytecode_policy_analysis"]["default_policy_recommendation"]
-  if args.require_keep_configured_default and not recommended[
-      "keep_configured_default"]:
-    print(
-        "configured default policy is no longer recommended",
-        file=sys.stderr,
-    )
-    return 1
-  if args.require_default_mode and recommended[
-      "recommended_mode"] != args.require_default_mode:
-    print(
-        "recommended default mode mismatch: "
-        f"expected {args.require_default_mode}, got {recommended['recommended_mode']}",
-        file=sys.stderr,
-    )
-    return 1
-
-  return 0
+  return validate_policy_recommendation(
+      summary,
+      args.require_keep_configured_default,
+      args.require_default_mode,
+  )
 
 
 if __name__ == "__main__":
