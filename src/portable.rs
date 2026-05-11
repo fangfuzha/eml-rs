@@ -144,6 +144,9 @@ impl Builder {
             SourceExpr::Asin(inner) => self.push_unary_source("asin", inner),
             SourceExpr::Acos(inner) => self.push_unary_source("acos", inner),
             SourceExpr::Atan(inner) => self.push_unary_source("atan", inner),
+            SourceExpr::Asinh(inner) => self.push_unary_source("asinh", inner),
+            SourceExpr::Acosh(inner) => self.push_unary_source("acosh", inner),
+            SourceExpr::Atanh(inner) => self.push_unary_source("atanh", inner),
             SourceExpr::Sqrt(inner) => self.push_unary_source("sqrt", inner),
             SourceExpr::Sigmoid(inner) => self.push_unary_source("sigmoid", inner),
             SourceExpr::Softplus(inner) => self.push_unary_source("softplus", inner),
@@ -152,6 +155,7 @@ impl Builder {
             SourceExpr::ReluSoft(inner) => self.push_unary_source("relu_soft", inner),
             SourceExpr::Elu(lhs, rhs) => self.push_binary_source("elu", lhs, rhs),
             SourceExpr::LeakyRelu(lhs, rhs) => self.push_binary_source("leaky_relu", lhs, rhs),
+            SourceExpr::Hypot(lhs, rhs) => self.push_binary_source("hypot", lhs, rhs),
             SourceExpr::Softsign(inner) => self.push_unary_source("softsign", inner),
             SourceExpr::Mish(inner) => self.push_unary_source("mish", inner),
         }

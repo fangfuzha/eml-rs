@@ -172,6 +172,21 @@ fn paper_basis_extended_elementary_functions_match_reference() {
 }
 
 #[test]
+fn paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference() {
+    let source =
+        parse_source_expr("asinh(x0) + acosh(x1) + atanh(x0 / 3) + hypot(x0, x1)").unwrap();
+    let expr = lower_to_eml(&source).unwrap();
+    let vars = vec![Complex64::new(0.35, 0.1), Complex64::new(1.4, -0.2)];
+    let ref_v = eval_source_expr_complex(&source, &vars).unwrap();
+    let relaxed = EvalPolicy::relaxed();
+    let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    assert!(
+        relaxed_values_match(ref_v, eml_v, 5e-5),
+        "ref={ref_v:?}, eml={eml_v:?}"
+    );
+}
+
+#[test]
 fn paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable() {
     let source =
         parse_source_expr("sigmoid(x0) + softplus(x0) + swish(x0) + gelu(x0) + relu(x0)").unwrap();
@@ -231,6 +246,17 @@ fn repo_extension_symbolic_derivative_matches_finite_difference() {
     let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
     let numeric = finite_diff_real(&source, &vars, 0, 1e-6);
     assert!((analytic - numeric).abs() <= 5e-3);
+}
+
+#[test]
+fn paper_basis_p22_symbolic_derivative_matches_finite_difference() {
+    let source =
+        parse_source_expr("asinh(x0) + acosh(x0 + 2) + atanh(x0 / 3) + hypot(x0, x0 + 1)").unwrap();
+    let deriv = symbolic_derivative(&source, 0);
+    let vars = [Complex64::new(0.35, 0.0)];
+    let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
+    let numeric = finite_diff_real(&source, &vars, 0, 1e-6);
+    assert!((analytic - numeric).abs() <= 5e-4);
 }
 
 #[test]

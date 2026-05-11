@@ -127,6 +127,9 @@ fn source_var_arity(expr: &SourceExpr) -> usize {
         | SourceExpr::Asin(inner)
         | SourceExpr::Acos(inner)
         | SourceExpr::Atan(inner)
+        | SourceExpr::Asinh(inner)
+        | SourceExpr::Acosh(inner)
+        | SourceExpr::Atanh(inner)
         | SourceExpr::Sqrt(inner)
         | SourceExpr::Sigmoid(inner)
         | SourceExpr::Softplus(inner)
@@ -140,6 +143,7 @@ fn source_var_arity(expr: &SourceExpr) -> usize {
         | SourceExpr::Mul(lhs, rhs)
         | SourceExpr::Div(lhs, rhs)
         | SourceExpr::Pow(lhs, rhs)
+        | SourceExpr::Hypot(lhs, rhs)
         | SourceExpr::Elu(lhs, rhs)
         | SourceExpr::LeakyRelu(lhs, rhs) => source_var_arity(lhs).max(source_var_arity(rhs)),
     }

@@ -285,20 +285,47 @@
     {
       "name": "asinh",
       "category": "paper-basis",
-      "status": "missing",
-      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Asinh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "witness": {
+        "formula": "log(x + sqrt(x^2 + 1))",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "acosh",
       "category": "paper-basis",
-      "status": "missing",
-      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Acosh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "witness": {
+        "formula": "log(x + sqrt(x - 1) * sqrt(x + 1))",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "atanh",
       "category": "paper-basis",
-      "status": "missing",
-      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Atanh"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "witness": {
+        "formula": "(log(1 + x) - log(1 - x)) / 2",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "sigmoid",
@@ -401,8 +428,17 @@
       "name": "hypot",
       "display": "hypot(x, y)",
       "category": "paper-basis",
-      "status": "missing",
-      "notes": "Included by the paper basis, but not yet exposed as a direct public AST/lowering entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:Hypot"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "witness": {
+        "formula": "sqrt(x^2 + y^2)",
+        "source": "lowering-helper",
+        "confidence": "explicit"
+      }
     }
   ],
   "repoExtensions": [

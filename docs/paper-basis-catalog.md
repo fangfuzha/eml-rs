@@ -60,9 +60,9 @@
 | `asin(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Asin`                                               |
 | `acos(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Acos`                                               |
 | `atan(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Atan`                                               |
-| `asinh(x)`         | 是       | `missing` | 无                                                                                                                                           | 当前无公开 AST 成员                                       |
-| `acosh(x)`         | 是       | `missing` | 无                                                                                                                                           | 当前无公开 AST 成员                                       |
-| `atanh(x)`         | 是       | `missing` | 无                                                                                                                                           | 当前无公开 AST 成员                                       |
+| `asinh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Asinh`                                             |
+| `acosh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Acosh`                                             |
+| `atanh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Atanh`                                             |
 | `sigmoid(x)`       | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable` | 论文基集成员，同时也服务训练模板                          |
 
 ## 3. 二元操作
@@ -76,7 +76,7 @@
 | `pow(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `bytecode_and_tree_evaluation_agree`                   | 对应 `Pow`；当前测试名仍偏 backend 一致性视角      |
 | `log_x(y)`    | 是       | `partial` | 无独立测试                                                                                                      | 可由 `log(y) / log(x)` 组合表达，但无独立 AST 成员 |
 | `avg(x, y)`   | 是       | `partial` | 无独立测试                                                                                                      | 可由 `(x + y) / 2` 组合表达，但无独立 AST 成员     |
-| `hypot(x, y)` | 是       | `missing` | 无                                                                                                              | 当前无公开 AST 成员                                |
+| `hypot(x, y)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference` | 对应 `Hypot`                                      |
 
 ## 4. 仓库扩展模板（非论文原始基集）
 
@@ -110,15 +110,13 @@
 
 优先缺口：
 
-1. `asinh` / `acosh` / `atanh` 未形成公开 AST / lowering 能力
-2. `hypot` 未形成公开 AST / lowering 能力
-3. `half` / `inv` / `sqr` / `avg` / arbitrary-base `log` 仍停留在组合表达层，没有统一的 paper-basis 命名入口
-4. 多个 `paper-basis` 成员只有间接覆盖，缺少独立、可审计的见证式回归测试
+1. `half` / `inv` / `sqr` / `avg` / arbitrary-base `log` 仍停留在组合表达层，没有统一的 paper-basis 命名入口
+2. 多个 `paper-basis` 成员只有间接覆盖，缺少独立、可审计的见证式回归测试
 
 ## 6. 对后续阶段的直接输入
 
 - P19 completeness harness 应优先覆盖：`exp`、`ln`、`+`、`-`、`*`、`/`、`pow`
-- 第二批建议补齐：`asinh`、`acosh`、`atanh`、`hypot`
+- 第二批已补齐：`asinh`、`acosh`、`atanh`、`hypot`
 - 文档与测试命名中建议引入前缀：`paper_basis_*` / `repo_extension_*`
 
 ## 7. 代表性 EML 见证式与来源
@@ -150,13 +148,16 @@
 | `sinh(x)`    | `(exp(x) - exp(-x)) / 2`         | 仓库 `eml_sinh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
 | `cosh(x)`    | `(exp(x) + exp(-x)) / 2`         | 仓库 `eml_cosh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
 | `tanh(x)`    | `sinh(x) / cosh(x)`              | 仓库 `eml_tanh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
+| `asinh(x)`   | `log(x + sqrt(x^2 + 1))`         | 仓库 `eml_asinh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | 仓库 `eml_acosh` 显式实现                                                  | 明确找到 | 当前 lowering witness                           |
+| `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | 仓库 `eml_atanh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `hypot(x, y)` | `sqrt(x^2 + y^2)`               | 仓库 `eml_hypot` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
 | `sigmoid(x)` | `1 / (1 + exp(-x))`              | 论文方法段明确把 logistic sigmoid 列为基集成员；仓库 `eml_sigmoid` 显式实现   | 明确找到 | 兼具 paper-basis 与训练模板双重意义             |
 
 ### 当前无法在公开来源中直接抄录显式 witness 的条目
 
 - `asin(x)` / `acos(x)` / `atan(x)`：仓库已有 lowering witness，但目前可访问论文正文更偏向“存在性与复杂度”而非直接列式。
-- `asinh(x)` / `acosh(x)` / `atanh(x)`：论文正文确认该族属于 basis，但当前仓库尚未提供公开 AST / lowering 入口。
-- `avg(x, y)` / arbitrary-base `log_x(y)` / `hypot(x, y)`：论文将其视为 basis 成员，但当前仓库尚未把它们沉淀为独立 paper-basis 命名入口。
+- `avg(x, y)` / arbitrary-base `log_x(y)`：论文将其视为 basis 成员，但当前仓库尚未把它们沉淀为独立 paper-basis 命名入口。
 
 ### 对 P19 的直接用途
 
@@ -185,7 +186,7 @@ Purpose:
 
 - Fully covered paper-basis members include: variables, `1/-1/2/e/pi/i`, `neg`, `exp`, `log`, `sqrt`, `sin/cos/tan`, `sinh/cosh/tanh`, `asin/acos/atan`, `sigmoid`, and the basic arithmetic operators plus `pow`.
 - Partial coverage currently applies to: `half`, `inv`, `sqr`, arbitrary-base `log`, and `avg` because they are representable through combinations but not exposed as dedicated paper-basis members.
-- Missing paper-basis members currently include: `asinh`, `acosh`, `atanh`, and `hypot` as direct public AST/lowering entries.
+- Missing paper-basis members currently include: none as direct public AST/lowering entries; remaining gaps are naming/governance items such as `half`, `inv`, `sqr`, `avg`, and arbitrary-base `log`.
 
 ### Representative witness formulas and sources
 
@@ -214,13 +215,16 @@ This first witness set records auditable formulas using three source tiers:
 | `sinh(x)`    | `(exp(x) - exp(-x)) / 2`         | explicit helper `eml_sinh`                                                            | explicit   | repository witness                       |
 | `cosh(x)`    | `(exp(x) + exp(-x)) / 2`         | explicit helper `eml_cosh`                                                            | explicit   | repository witness                       |
 | `tanh(x)`    | `sinh(x) / cosh(x)`              | explicit helper `eml_tanh`                                                            | explicit   | repository witness                       |
+| `asinh(x)`   | `log(x + sqrt(x^2 + 1))`         | explicit helper `eml_asinh`                                                            | explicit   | repository witness                       |
+| `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | explicit helper `eml_acosh`                                                         | explicit   | repository witness                       |
+| `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | explicit helper `eml_atanh`                                                            | explicit   | repository witness                       |
+| `hypot(x, y)` | `sqrt(x^2 + y^2)`               | explicit helper `eml_hypot`                                                            | explicit   | repository witness                       |
 | `sigmoid(x)` | `1 / (1 + exp(-x))`              | logistic sigmoid is explicitly part of the paper basis; explicit helper `eml_sigmoid` | explicit   | both paper-basis and training-relevant   |
 
 ### Items whose explicit public witnesses are still not transcribed here
 
 - `asin(x)` / `acos(x)` / `atan(x)`: the repository has lowering witnesses, but the paper material currently available to this workflow is stronger on existence and complexity than on directly printed formulas.
-- `asinh(x)` / `acosh(x)` / `atanh(x)`: the paper basis includes the family, but the repository does not yet expose direct public AST/lowering entries.
-- `avg(x, y)`, arbitrary-base `log_x(y)`, and `hypot(x, y)`: included in the paper basis, but not yet surfaced as dedicated paper-basis entries in the repository.
+- `avg(x, y)` and arbitrary-base `log_x(y)`: included in the paper basis, but not yet surfaced as dedicated paper-basis entries in the repository.
 
 ### Repository extensions outside the original paper basis
 

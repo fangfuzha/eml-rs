@@ -86,6 +86,12 @@ fn eml_pow_witness(base: LoweredExpr, exponent: LoweredExpr) -> LoweredExpr {
     eml_exp_witness(eml_mul_witness(exponent, eml_log_witness(base)))
 }
 
+/// Builds the current lowering witness for square root.
+fn eml_sqrt_witness(argument: LoweredExpr) -> LoweredExpr {
+    let two = eml_add_witness(one(), one());
+    eml_pow_witness(argument, eml_inv_witness(two))
+}
+
 /// Builds the representative witness for `exp(x)`.
 fn witness_exp() -> LoweredExpr {
     eml_exp_witness(var_x())
@@ -121,6 +127,38 @@ fn witness_pow() -> LoweredExpr {
     eml_pow_witness(var_x(), var_y())
 }
 
+/// Builds the representative witness for `asinh(x)`.
+fn witness_asinh() -> LoweredExpr {
+    let squared = eml_mul_witness(var_x(), var_x());
+    eml_log_witness(eml_add_witness(
+        var_x(),
+        eml_sqrt_witness(eml_add_witness(squared, one())),
+    ))
+}
+
+/// Builds the representative witness for `acosh(x)`.
+fn witness_acosh() -> LoweredExpr {
+    let left = eml_sqrt_witness(eml_sub_witness(var_x(), one()));
+    let right = eml_sqrt_witness(eml_add_witness(var_x(), one()));
+    eml_log_witness(eml_add_witness(var_x(), eml_mul_witness(left, right)))
+}
+
+/// Builds the representative witness for `atanh(x)`.
+fn witness_atanh() -> LoweredExpr {
+    let numerator = eml_sub_witness(
+        eml_log_witness(eml_add_witness(one(), var_x())),
+        eml_log_witness(eml_sub_witness(one(), var_x())),
+    );
+    eml_div_witness(numerator, eml_add_witness(one(), one()))
+}
+
+/// Builds the representative witness for `hypot(x, y)`.
+fn witness_hypot() -> LoweredExpr {
+    let x2 = eml_mul_witness(var_x(), var_x());
+    let y2 = eml_mul_witness(var_y(), var_y());
+    eml_sqrt_witness(eml_add_witness(x2, y2))
+}
+
 /// Returns deterministic samples covering the paper-fidelity domains.
 fn paper_samples() -> [PaperSample; 4] {
     [
@@ -144,7 +182,7 @@ fn paper_samples() -> [PaperSample; 4] {
 }
 
 /// Returns the first completeness harness cases for representative witnesses.
-fn witness_cases() -> [PaperWitnessCase; 7] {
+fn witness_cases() -> [PaperWitnessCase; 11] {
     [
         PaperWitnessCase {
             name: "exp",
@@ -208,6 +246,42 @@ fn witness_cases() -> [PaperWitnessCase; 7] {
             witness_formula: "exp(y * ln(x))",
             tolerance: 5e-7,
             build_witness: witness_pow,
+        },
+        PaperWitnessCase {
+            name: "asinh",
+            catalog_name: "asinh",
+            catalog_section: "unaryFunctions",
+            source_formula: "asinh(x)",
+            witness_formula: "log(x + sqrt(x^2 + 1))",
+            tolerance: 2e-6,
+            build_witness: witness_asinh,
+        },
+        PaperWitnessCase {
+            name: "acosh",
+            catalog_name: "acosh",
+            catalog_section: "unaryFunctions",
+            source_formula: "acosh(x)",
+            witness_formula: "log(x + sqrt(x - 1) * sqrt(x + 1))",
+            tolerance: 2e-6,
+            build_witness: witness_acosh,
+        },
+        PaperWitnessCase {
+            name: "atanh",
+            catalog_name: "atanh",
+            catalog_section: "unaryFunctions",
+            source_formula: "atanh(x)",
+            witness_formula: "(log(1 + x) - log(1 - x)) / 2",
+            tolerance: 2e-6,
+            build_witness: witness_atanh,
+        },
+        PaperWitnessCase {
+            name: "hypot",
+            catalog_name: "hypot",
+            catalog_section: "binaryOperations",
+            source_formula: "hypot(x, y)",
+            witness_formula: "sqrt(x^2 + y^2)",
+            tolerance: 5e-6,
+            build_witness: witness_hypot,
         },
     ]
 }

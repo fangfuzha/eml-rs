@@ -56,6 +56,11 @@ pub fn estimate_cost(expr: &SourceExpr) -> CostModel {
                 let (eb, lb) = walk(b);
                 (ea + eb + 6, la + lb + 6)
             }
+            SourceExpr::Hypot(a, b) => {
+                let (ea, la) = walk(a);
+                let (eb, lb) = walk(b);
+                (ea + eb + 18, la + lb + 18)
+            }
             SourceExpr::Exp(x) => {
                 let (e, l) = walk(x);
                 (e + 1, l)
@@ -80,7 +85,12 @@ pub fn estimate_cost(expr: &SourceExpr) -> CostModel {
                 let (e, l) = walk(x);
                 (e + 18, l + 18)
             }
-            SourceExpr::Asin(x) | SourceExpr::Acos(x) | SourceExpr::Atan(x) => {
+            SourceExpr::Asin(x)
+            | SourceExpr::Acos(x)
+            | SourceExpr::Atan(x)
+            | SourceExpr::Asinh(x)
+            | SourceExpr::Acosh(x)
+            | SourceExpr::Atanh(x) => {
                 let (e, l) = walk(x);
                 (e + 30, l + 30)
             }
@@ -159,6 +169,9 @@ pub fn rewrite_once(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Pow(a, b) => {
             SourceExpr::Pow(Box::new(rewrite_once(a)), Box::new(rewrite_once(b)))
         }
+        SourceExpr::Hypot(a, b) => {
+            SourceExpr::Hypot(Box::new(rewrite_once(a)), Box::new(rewrite_once(b)))
+        }
         SourceExpr::Exp(x) => SourceExpr::Exp(Box::new(rewrite_once(x))),
         SourceExpr::Log(x) => SourceExpr::Log(Box::new(rewrite_once(x))),
         SourceExpr::Sin(x) => SourceExpr::Sin(Box::new(rewrite_once(x))),
@@ -170,6 +183,9 @@ pub fn rewrite_once(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Asin(x) => SourceExpr::Asin(Box::new(rewrite_once(x))),
         SourceExpr::Acos(x) => SourceExpr::Acos(Box::new(rewrite_once(x))),
         SourceExpr::Atan(x) => SourceExpr::Atan(Box::new(rewrite_once(x))),
+        SourceExpr::Asinh(x) => SourceExpr::Asinh(Box::new(rewrite_once(x))),
+        SourceExpr::Acosh(x) => SourceExpr::Acosh(Box::new(rewrite_once(x))),
+        SourceExpr::Atanh(x) => SourceExpr::Atanh(Box::new(rewrite_once(x))),
         SourceExpr::Sqrt(x) => SourceExpr::Sqrt(Box::new(rewrite_once(x))),
         SourceExpr::Sigmoid(x) => SourceExpr::Sigmoid(Box::new(rewrite_once(x))),
         SourceExpr::Softplus(x) => SourceExpr::Softplus(Box::new(rewrite_once(x))),
@@ -424,7 +440,11 @@ fn apply_local_rules(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Asin(_)
         | SourceExpr::Acos(_)
         | SourceExpr::Atan(_)
+        | SourceExpr::Asinh(_)
+        | SourceExpr::Acosh(_)
+        | SourceExpr::Atanh(_)
         | SourceExpr::Sqrt(_)
+        | SourceExpr::Hypot(_, _)
         | SourceExpr::GeluTanh(_) => expr.clone(),
         _ => expr.clone(),
     }

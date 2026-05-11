@@ -71,6 +71,8 @@ pub enum SourceExpr {
     Div(Box<SourceExpr>, Box<SourceExpr>),
     /// Power.
     Pow(Box<SourceExpr>, Box<SourceExpr>),
+    /// Euclidean norm `sqrt(x^2 + y^2)`.
+    Hypot(Box<SourceExpr>, Box<SourceExpr>),
     /// Exponential.
     Exp(Box<SourceExpr>),
     /// Natural logarithm.
@@ -93,6 +95,12 @@ pub enum SourceExpr {
     Acos(Box<SourceExpr>),
     /// Inverse tangent.
     Atan(Box<SourceExpr>),
+    /// Inverse hyperbolic sine.
+    Asinh(Box<SourceExpr>),
+    /// Inverse hyperbolic cosine.
+    Acosh(Box<SourceExpr>),
+    /// Inverse hyperbolic tangent.
+    Atanh(Box<SourceExpr>),
     /// Square root.
     Sqrt(Box<SourceExpr>),
     /// Logistic sigmoid.
@@ -498,6 +506,10 @@ pub fn simplify_source_expr(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Mul(a, b) => src_mul(simplify_source_expr(a), simplify_source_expr(b)),
         SourceExpr::Div(a, b) => src_div(simplify_source_expr(a), simplify_source_expr(b)),
         SourceExpr::Pow(a, b) => src_pow(simplify_source_expr(a), simplify_source_expr(b)),
+        SourceExpr::Hypot(a, b) => SourceExpr::Hypot(
+            src_box(simplify_source_expr(a)),
+            src_box(simplify_source_expr(b)),
+        ),
         SourceExpr::Exp(x) => src_exp(simplify_source_expr(x)),
         SourceExpr::Log(x) => src_log(simplify_source_expr(x)),
         SourceExpr::Sin(x) => SourceExpr::Sin(src_box(simplify_source_expr(x))),
@@ -509,6 +521,9 @@ pub fn simplify_source_expr(expr: &SourceExpr) -> SourceExpr {
         SourceExpr::Asin(x) => SourceExpr::Asin(src_box(simplify_source_expr(x))),
         SourceExpr::Acos(x) => SourceExpr::Acos(src_box(simplify_source_expr(x))),
         SourceExpr::Atan(x) => SourceExpr::Atan(src_box(simplify_source_expr(x))),
+        SourceExpr::Asinh(x) => SourceExpr::Asinh(src_box(simplify_source_expr(x))),
+        SourceExpr::Acosh(x) => SourceExpr::Acosh(src_box(simplify_source_expr(x))),
+        SourceExpr::Atanh(x) => SourceExpr::Atanh(src_box(simplify_source_expr(x))),
         SourceExpr::Sqrt(x) => SourceExpr::Sqrt(src_box(simplify_source_expr(x))),
         SourceExpr::Sigmoid(x) => SourceExpr::Sigmoid(src_box(simplify_source_expr(x))),
         SourceExpr::Softplus(x) => SourceExpr::Softplus(src_box(simplify_source_expr(x))),
@@ -549,6 +564,9 @@ pub fn source_expr_node_count(expr: &SourceExpr) -> usize {
         | SourceExpr::Asin(x)
         | SourceExpr::Acos(x)
         | SourceExpr::Atan(x)
+        | SourceExpr::Asinh(x)
+        | SourceExpr::Acosh(x)
+        | SourceExpr::Atanh(x)
         | SourceExpr::Sqrt(x)
         | SourceExpr::Sigmoid(x)
         | SourceExpr::Softplus(x)
@@ -562,6 +580,7 @@ pub fn source_expr_node_count(expr: &SourceExpr) -> usize {
         | SourceExpr::Mul(a, b)
         | SourceExpr::Div(a, b)
         | SourceExpr::Pow(a, b)
+        | SourceExpr::Hypot(a, b)
         | SourceExpr::Elu(a, b)
         | SourceExpr::LeakyRelu(a, b) => source_expr_node_count(a) + source_expr_node_count(b),
     }
@@ -622,6 +641,14 @@ fn symbolic_derivative_impl(expr: &SourceExpr, var_index: usize) -> SourceExpr {
             let rhs = src_mul(bv.clone(), src_div(da, av.clone()));
             src_mul(src_pow(av, bv), src_add(lhs, rhs))
         }
+        SourceExpr::Hypot(a, b) => {
+            let da = symbolic_derivative_impl(a, var_index);
+            let db = symbolic_derivative_impl(b, var_index);
+            let av = (**a).clone();
+            let bv = (**b).clone();
+            let numerator = src_add(src_mul(av.clone(), da), src_mul(bv.clone(), db));
+            src_div(numerator, SourceExpr::Hypot(src_box(av), src_box(bv)))
+        }
         SourceExpr::Exp(x) => {
             let dx = symbolic_derivative_impl(x, var_index);
             src_mul(src_exp((**x).clone()), dx)
@@ -669,6 +696,21 @@ fn symbolic_derivative_impl(expr: &SourceExpr, var_index: usize) -> SourceExpr {
         SourceExpr::Atan(x) => {
             let dx = symbolic_derivative_impl(x, var_index);
             src_div(dx, src_add(src_one(), src_pow((**x).clone(), src_two())))
+        }
+        SourceExpr::Asinh(x) => {
+            let dx = symbolic_derivative_impl(x, var_index);
+            let inner = src_add(src_pow((**x).clone(), src_two()), src_one());
+            src_div(dx, SourceExpr::Sqrt(src_box(inner)))
+        }
+        SourceExpr::Acosh(x) => {
+            let dx = symbolic_derivative_impl(x, var_index);
+            let left = SourceExpr::Sqrt(src_box(src_sub((**x).clone(), src_one())));
+            let right = SourceExpr::Sqrt(src_box(src_add((**x).clone(), src_one())));
+            src_div(dx, src_mul(left, right))
+        }
+        SourceExpr::Atanh(x) => {
+            let dx = symbolic_derivative_impl(x, var_index);
+            src_div(dx, src_sub(src_one(), src_pow((**x).clone(), src_two())))
         }
         SourceExpr::Sqrt(x) => {
             let dx = symbolic_derivative_impl(x, var_index);
@@ -1147,6 +1189,11 @@ pub fn eval_source_expr_complex(
             let y = eval_source_expr_complex(b, vars)?;
             Ok((x.ln() * y).exp())
         }
+        SourceExpr::Hypot(a, b) => {
+            let x = eval_source_expr_complex(a, vars)?;
+            let y = eval_source_expr_complex(b, vars)?;
+            Ok((x * x + y * y).sqrt())
+        }
         SourceExpr::Exp(x) => Ok(eval_source_expr_complex(x, vars)?.exp()),
         SourceExpr::Log(x) => Ok(eval_source_expr_complex(x, vars)?.ln()),
         SourceExpr::Sin(x) => Ok(eval_source_expr_complex(x, vars)?.sin()),
@@ -1172,6 +1219,22 @@ pub fn eval_source_expr_complex(
             Ok((i / two)
                 * ((Complex64::new(1.0, 0.0) - i * z).ln()
                     - (Complex64::new(1.0, 0.0) + i * z).ln()))
+        }
+        SourceExpr::Asinh(x) => {
+            let z = eval_source_expr_complex(x, vars)?;
+            let one = Complex64::new(1.0, 0.0);
+            Ok((z + (z * z + one).sqrt()).ln())
+        }
+        SourceExpr::Acosh(x) => {
+            let z = eval_source_expr_complex(x, vars)?;
+            let one = Complex64::new(1.0, 0.0);
+            Ok((z + (z - one).sqrt() * (z + one).sqrt()).ln())
+        }
+        SourceExpr::Atanh(x) => {
+            let z = eval_source_expr_complex(x, vars)?;
+            let one = Complex64::new(1.0, 0.0);
+            let two = Complex64::new(2.0, 0.0);
+            Ok(((one + z).ln() - (one - z).ln()) / two)
         }
         SourceExpr::Sqrt(x) => Ok(eval_source_expr_complex(x, vars)?.sqrt()),
         SourceExpr::Sigmoid(x) => {
@@ -1252,6 +1315,7 @@ pub fn lower_to_eml(expr: &SourceExpr) -> Result<LoweredExpr, LoweringError> {
         SourceExpr::Mul(a, b) => Ok(eml_mul(lower_to_eml(a)?, lower_to_eml(b)?)),
         SourceExpr::Div(a, b) => Ok(eml_div(lower_to_eml(a)?, lower_to_eml(b)?)),
         SourceExpr::Pow(a, b) => Ok(eml_pow(lower_to_eml(a)?, lower_to_eml(b)?)),
+        SourceExpr::Hypot(a, b) => eml_hypot(lower_to_eml(a)?, lower_to_eml(b)?),
         SourceExpr::Exp(x) => Ok(eml_exp(lower_to_eml(x)?)),
         SourceExpr::Log(x) => Ok(eml_log(lower_to_eml(x)?)),
         SourceExpr::Sin(x) => eml_sin(lower_to_eml(x)?),
@@ -1263,6 +1327,9 @@ pub fn lower_to_eml(expr: &SourceExpr) -> Result<LoweredExpr, LoweringError> {
         SourceExpr::Asin(x) => eml_asin(lower_to_eml(x)?),
         SourceExpr::Acos(x) => eml_acos(lower_to_eml(x)?),
         SourceExpr::Atan(x) => eml_atan(lower_to_eml(x)?),
+        SourceExpr::Asinh(x) => eml_asinh(lower_to_eml(x)?),
+        SourceExpr::Acosh(x) => eml_acosh(lower_to_eml(x)?),
+        SourceExpr::Atanh(x) => eml_atanh(lower_to_eml(x)?),
         SourceExpr::Sqrt(x) => eml_sqrt(lower_to_eml(x)?),
         SourceExpr::Sigmoid(x) => Ok(eml_sigmoid(lower_to_eml(x)?)),
         SourceExpr::Softplus(x) => Ok(eml_softplus(lower_to_eml(x)?)),
@@ -1379,7 +1446,7 @@ fn eml_tanh(z: LoweredExpr) -> LoweredExpr {
 }
 
 fn eml_sqrt(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
-    Ok(eml_pow(z, eml_rational(1, 2)?))
+    Ok(eml_pow(z, eml_inv(eml_int(2)?)))
 }
 
 fn eml_asin(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
@@ -1410,6 +1477,35 @@ fn eml_atan(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
     let term_a = eml_log(eml_sub(one.clone(), eml_mul(i.clone(), z.clone())));
     let term_b = eml_log(eml_add(one, eml_mul(i, z)));
     Ok(eml_mul(half_i, eml_sub(term_a, term_b)))
+}
+
+/// Lowers inverse hyperbolic sine as `log(z + sqrt(z^2 + 1))`.
+fn eml_asinh(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
+    let root = eml_sqrt(eml_add(eml_mul(z.clone(), z.clone()), LoweredExpr::one()))?;
+    Ok(eml_log(eml_add(z, root)))
+}
+
+/// Lowers inverse hyperbolic cosine as `log(z + sqrt(z - 1) * sqrt(z + 1))`.
+fn eml_acosh(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
+    let one = LoweredExpr::one();
+    let left = eml_sqrt(eml_sub(z.clone(), one.clone()))?;
+    let right = eml_sqrt(eml_add(z.clone(), one))?;
+    Ok(eml_log(eml_add(z, eml_mul(left, right))))
+}
+
+/// Lowers inverse hyperbolic tangent as `(log(1 + z) - log(1 - z)) / 2`.
+fn eml_atanh(z: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
+    let one = LoweredExpr::one();
+    let numerator = eml_sub(
+        eml_log(eml_add(one.clone(), z.clone())),
+        eml_log(eml_sub(one, z)),
+    );
+    Ok(eml_div(numerator, eml_int(2)?))
+}
+
+/// Lowers the paper-basis `hypot(x, y)` entry as `sqrt(x^2 + y^2)`.
+fn eml_hypot(a: LoweredExpr, b: LoweredExpr) -> Result<LoweredExpr, LoweringError> {
+    eml_sqrt(eml_add(eml_mul(a.clone(), a), eml_mul(b.clone(), b)))
 }
 
 fn eml_sigmoid(z: LoweredExpr) -> LoweredExpr {
@@ -1807,6 +1903,9 @@ fn parse_function_call(name: &str, args: Vec<SourceExpr>) -> Result<SourceExpr, 
         ("asin", 1) => Ok(SourceExpr::Asin(Box::new(args[0].clone()))),
         ("acos", 1) => Ok(SourceExpr::Acos(Box::new(args[0].clone()))),
         ("atan", 1) => Ok(SourceExpr::Atan(Box::new(args[0].clone()))),
+        ("asinh", 1) => Ok(SourceExpr::Asinh(Box::new(args[0].clone()))),
+        ("acosh", 1) => Ok(SourceExpr::Acosh(Box::new(args[0].clone()))),
+        ("atanh", 1) => Ok(SourceExpr::Atanh(Box::new(args[0].clone()))),
         ("sqrt", 1) => Ok(SourceExpr::Sqrt(Box::new(args[0].clone()))),
         ("sigmoid", 1) => Ok(SourceExpr::Sigmoid(Box::new(args[0].clone()))),
         ("softplus", 1) => Ok(SourceExpr::Softplus(Box::new(args[0].clone()))),
@@ -1832,6 +1931,10 @@ fn parse_function_call(name: &str, args: Vec<SourceExpr>) -> Result<SourceExpr, 
         ("softsign", 1) => Ok(SourceExpr::Softsign(Box::new(args[0].clone()))),
         ("mish", 1) => Ok(SourceExpr::Mish(Box::new(args[0].clone()))),
         ("pow", 2) => Ok(SourceExpr::Pow(
+            Box::new(args[0].clone()),
+            Box::new(args[1].clone()),
+        )),
+        ("hypot", 2) => Ok(SourceExpr::Hypot(
             Box::new(args[0].clone()),
             Box::new(args[1].clone()),
         )),
@@ -1988,11 +2091,23 @@ mod tests {
 
     #[test]
     fn parse_extended_function_family() {
-        let expr = parse_source_expr("tanh(x0) + asin(x1) + gelu(x2)").unwrap();
+        let expr = parse_source_expr(
+            "tanh(x0) + asin(x1) + asinh(x2) + acosh(x3) + atanh(x4) + hypot(x0,x1) + gelu(x2)",
+        )
+        .unwrap();
         match expr {
             SourceExpr::Add(_, _) => {}
             _ => panic!("unexpected parse tree: {expr:?}"),
         }
+    }
+
+    #[test]
+    fn eval_reference_for_p22_paper_basis_functions() {
+        let src =
+            parse_source_expr("asinh(x0) + acosh(x1) + atanh(x0 / 3) + hypot(x0, x1)").unwrap();
+        let vars = [Complex64::new(0.35, 0.1), Complex64::new(1.4, -0.2)];
+        let value = eval_source_expr_complex(&src, &vars).unwrap();
+        assert!(value.re.is_finite() && value.im.is_finite());
     }
 
     #[test]
@@ -2167,6 +2282,18 @@ mod tests {
         let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
         let numeric = finite_diff_real(&expr, &vars, 0, 1e-6);
         assert!((analytic - numeric).abs() <= 5e-3);
+    }
+
+    #[test]
+    fn symbolic_derivative_for_p22_paper_basis_functions_is_evaluable() {
+        let expr =
+            parse_source_expr("asinh(x0) + acosh(x0 + 2) + atanh(x0 / 3) + hypot(x0, x0 + 1)")
+                .unwrap();
+        let deriv = symbolic_derivative(&expr, 0);
+        let vars = [Complex64::new(0.35, 0.0)];
+        let analytic = eval_source_expr_complex(&deriv, &vars).unwrap().re;
+        let numeric = finite_diff_real(&expr, &vars, 0, 1e-6);
+        assert!((analytic - numeric).abs() <= 5e-4);
     }
 
     #[test]
