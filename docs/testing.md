@@ -21,10 +21,11 @@
 ### 论文复现测试
 
 - `tests/paper_reproduction.rs` 是 `paper-basis` 专用测试面，不混入 `repo-extension` 训练模板。
-- 第一批 `VerifyBaseSet` 风格轻量 harness 回放 `exp`、`ln`、`+`、`-`、`*`、`/`、`pow` 的代表性 witness 链。
+- `VerifyBaseSet` 风格轻量 harness 回放 catalog 标注的代表性 witness 链，当前覆盖 `exp`、`ln`、`+`、`-`、`*`、`/`、`pow`、P22 新增缺口与组合命名入口。
 - 每条 witness 都比较三方输出：纯 EML witness、source lowering 结果、source reference。
 - 样本域固定覆盖正实轴、负实轴、零邻域与复平面。
-- `scripts/paper_reproduction_summary.py` 产出 `target/paper-reproduction-summary.json` 与 `target/paper-reproduction-summary.md`；nightly 上传 artifact，先不把摘要升级为阻断式 gate。
+- `scripts/paper_reproduction_summary.py` 从 `docs/paper-basis-catalog.json` 消费 replayed witness 锚点，产出 schema v2 的 `target/paper-reproduction-summary.json` 与 `target/paper-reproduction-summary.md`，包含覆盖率、missing/partial 明细与 witness provenance。
+- nightly 默认继续上传非阻断 artifact；`workflow_dispatch` 可用 `paper_strict_gate=true` 手动启用 `--require-all-covered --require-no-missing-replayed --require-min-covered-ratio 1.0`。
 
 ### 兼容性矩阵
 
@@ -82,10 +83,11 @@
 ### Paper Reproduction Tests
 
 - `tests/paper_reproduction.rs` is the dedicated `paper-basis` test surface and does not mix in `repo-extension` training templates.
-- The first lightweight `VerifyBaseSet`-style harness replays representative witness chains for `exp`, `ln`, `+`, `-`, `*`, `/`, and `pow`.
+- The lightweight `VerifyBaseSet`-style harness replays catalog-marked representative witness chains, currently covering `exp`, `ln`, `+`, `-`, `*`, `/`, `pow`, the P22 gap fills, and composition-only paper-basis names.
 - Each witness compares three outputs: pure EML witness, source lowering result, and source reference.
 - The fixed sample set covers the positive real axis, negative real axis, zero neighborhood, and complex plane.
-- `scripts/paper_reproduction_summary.py` emits `target/paper-reproduction-summary.json` and `target/paper-reproduction-summary.md`; nightly uploads them as artifacts before any decision to promote summaries into a blocking gate.
+- `scripts/paper_reproduction_summary.py` consumes replayed witness anchors from `docs/paper-basis-catalog.json` and emits schema v2 `target/paper-reproduction-summary.json` plus `target/paper-reproduction-summary.md` with coverage ratio, missing/partial details, and witness provenance.
+- Nightly still uploads a non-blocking artifact by default; `workflow_dispatch` can set `paper_strict_gate=true` to enable `--require-all-covered --require-no-missing-replayed --require-min-covered-ratio 1.0` manually.
 
 ### Compatibility Matrix
 

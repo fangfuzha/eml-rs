@@ -18,6 +18,11 @@ on:
           - metrics-only
           - paper-reproduction-only
           - sr-research-only
+      paper_strict_gate:
+        description: Enable strict paper reproduction summary gate for workflow_dispatch runs
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   actions: read
@@ -315,10 +320,19 @@ jobs:
       - name: Replay paper-basis witness harness
         run: cargo test --test paper_reproduction
       - name: Summarize paper reproduction assets
+        env:
+          PAPER_STRICT_GATE: ${{ github.event_name == 'workflow_dispatch' && inputs.paper_strict_gate || false }}
         run: |
+          strict_args=()
+          if [[ "$PAPER_STRICT_GATE" == "true" ]]; then
+            strict_args+=(--require-all-covered)
+            strict_args+=(--require-no-missing-replayed)
+            strict_args+=(--require-min-covered-ratio 1.0)
+          fi
           python3 scripts/paper_reproduction_summary.py \
             --output-json target/paper-reproduction-summary.json \
-            --output-md target/paper-reproduction-summary.md
+            --output-md target/paper-reproduction-summary.md \
+            "${strict_args[@]}"
       - name: Upload paper reproduction summary
         uses: actions/upload-artifact@v7
         with:

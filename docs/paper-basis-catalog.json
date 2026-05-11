@@ -171,7 +171,8 @@
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Exp"],
       "testAnchors": [
-        "tests/reference_compare.rs:paper_basis_eml_exp_matches_complex_exp"
+        "tests/reference_compare.rs:paper_basis_eml_exp_matches_complex_exp",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
       ],
       "witness": {
         "formula": "eml(x, 1)",
@@ -185,7 +186,8 @@
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Log"],
       "testAnchors": [
-        "tests/reference_compare.rs:paper_basis_eml_log_formula_matches_real_ln"
+        "tests/reference_compare.rs:paper_basis_eml_log_formula_matches_real_ln",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
       ],
       "witness": {
         "formula": "eml(1, eml(eml(1, x), 1))",
@@ -377,7 +379,8 @@
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Add"],
       "testAnchors": [
-        "tests/reference_compare.rs:paper_basis_source_lowering_matches_native_reference"
+        "tests/reference_compare.rs:paper_basis_source_lowering_matches_native_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
       ],
       "witness": {
         "formula": "x - (-y)",
@@ -391,6 +394,9 @@
       "category": "paper-basis",
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Sub"],
+      "testAnchors": [
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
       "witness": {
         "formula": "eml(ln(x), exp(y))",
         "source": "lowering-helper",
@@ -403,6 +409,9 @@
       "category": "paper-basis",
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Mul"],
+      "testAnchors": [
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
       "witness": {
         "formula": "exp(ln(x) + ln(y))",
         "source": "paper-introduction-and-lowering",
@@ -415,6 +424,9 @@
       "category": "paper-basis",
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Div"],
+      "testAnchors": [
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
       "witness": {
         "formula": "x * (1 / y)",
         "source": "lowering-helper",
@@ -428,7 +440,8 @@
       "status": "covered",
       "anchors": ["crates/eml-lowering/src/lib.rs:Pow"],
       "testAnchors": [
-        "tests/reference_compare.rs:bytecode_and_tree_evaluation_agree"
+        "tests/reference_compare.rs:bytecode_and_tree_evaluation_agree",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
       ],
       "witness": {
         "formula": "exp(y * ln(x))",

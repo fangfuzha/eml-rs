@@ -222,11 +222,11 @@
 
 ## P23: 论文见证式审计与 gate 升级
 
-- [ ] 将 `scripts/paper_reproduction_summary.py` 的 replayed witness 列表改为从 `docs/paper-basis-catalog.json` 消费，避免测试、脚本、文档三份 witness 清单漂移
-- [ ] 为 paper reproduction artifact 增加 schema version、coverage ratio、missing/partial 明细与 witness provenance 摘要
-- [ ] 增加 `--require-min-covered-ratio` / `--require-no-missing-replayed` 等可选门禁参数，保持 nightly 默认非阻断
-- [ ] 在 nightly 中保留 artifact-first，但为 `workflow_dispatch` 增加可手动开启的严格 paper-reproduction gate
-- [ ] 评估是否把第一批已稳定 witness replay 升级为主 CI 阻断条件之外的轻量强制 artifact 检查
+- [x] 将 `scripts/paper_reproduction_summary.py` 的 replayed witness 列表改为从 `docs/paper-basis-catalog.json` 消费，避免测试、脚本、文档三份 witness 清单漂移
+- [x] 为 paper reproduction artifact 增加 schema version、coverage ratio、missing/partial 明细与 witness provenance 摘要
+- [x] 增加 `--require-min-covered-ratio` / `--require-no-missing-replayed` 等可选门禁参数，保持 nightly 默认非阻断
+- [x] 在 nightly 中保留 artifact-first，但为 `workflow_dispatch` 增加可手动开启的严格 paper-reproduction gate
+- [x] 评估是否把第一批已稳定 witness replay 升级为主 CI 阻断条件之外的轻量强制 artifact 检查（结论：默认 nightly 保持非阻断 artifact，严格检查仅在手动 `workflow_dispatch` 开启）
 
 ## P24: 符号回归研究面增强
 
