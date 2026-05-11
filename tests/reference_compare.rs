@@ -260,6 +260,21 @@ fn paper_basis_p22_symbolic_derivative_matches_finite_difference() {
 }
 
 #[test]
+fn paper_basis_p22_named_composition_entries_match_reference() {
+    let source =
+        parse_source_expr("half(x0) + inv(x1) + sqr(x0) + avg(x0, x1) + log_x(x1, x0)").unwrap();
+    let expr = lower_to_eml(&source).unwrap();
+    let vars = vec![Complex64::new(0.35, 0.1), Complex64::new(1.4, -0.2)];
+    let ref_v = eval_source_expr_complex(&source, &vars).unwrap();
+    let relaxed = EvalPolicy::relaxed();
+    let eml_v = expr.eval_complex_with_policy(&vars, &relaxed).unwrap();
+    assert!(
+        relaxed_values_match(ref_v, eml_v, 5e-6),
+        "ref={ref_v:?}, eml={eml_v:?}"
+    );
+}
+
+#[test]
 fn repo_extension_batch_cross_entropy_mean_template_is_lowerable() {
     let batch_logits = vec![
         vec![

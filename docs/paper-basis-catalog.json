@@ -99,19 +99,33 @@
     {
       "name": "half",
       "category": "paper-basis",
-      "status": "partial",
-      "anchors": ["crates/eml-lowering/src/lib.rs:Div"],
-      "notes": "Representable as Div(x, 2) but not exposed as a dedicated member."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:parse_function_call"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_named_composition_entries_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "notes": "Named parser entry expands to Div(x, 2) rather than adding a dedicated AST variant.",
+      "witness": {
+        "formula": "x / 2",
+        "source": "parser-composition-entry",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "inv",
       "category": "paper-basis",
-      "status": "partial",
+      "status": "covered",
       "anchors": [
+        "crates/eml-lowering/src/lib.rs:parse_function_call",
         "crates/eml-lowering/src/lib.rs:eml_inv",
         "crates/eml-lowering/src/lib.rs:Div"
       ],
-      "notes": "Public AST uses Div(1, x).",
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_named_composition_entries_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "notes": "Named parser entry expands to Div(1, x) while lowering uses the existing reciprocal witness.",
       "witness": {
         "formula": "exp(-ln(x))",
         "source": "lowering-helper",
@@ -121,9 +135,21 @@
     {
       "name": "sqr",
       "category": "paper-basis",
-      "status": "partial",
-      "anchors": ["crates/eml-lowering/src/lib.rs:Pow"],
-      "notes": "Representable as Pow(x, 2) but not exposed as a dedicated member."
+      "status": "covered",
+      "anchors": [
+        "crates/eml-lowering/src/lib.rs:parse_function_call",
+        "crates/eml-lowering/src/lib.rs:Pow"
+      ],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_named_composition_entries_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "notes": "Named parser entry expands to Pow(x, 2) rather than adding a dedicated AST variant.",
+      "witness": {
+        "formula": "x * x",
+        "source": "parser-composition-entry",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "sqrt",
@@ -414,15 +440,35 @@
       "name": "log_base",
       "display": "log_x(y)",
       "category": "paper-basis",
-      "status": "partial",
-      "notes": "Representable as log(y) / log(x), but not exposed as a dedicated AST entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:parse_function_call"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_named_composition_entries_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "notes": "Named parser entry expands to log(y) / log(x) rather than adding a dedicated AST variant.",
+      "witness": {
+        "formula": "log(y) / log(x)",
+        "source": "parser-composition-entry",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "avg",
       "display": "avg(x, y)",
       "category": "paper-basis",
-      "status": "partial",
-      "notes": "Representable as (x + y) / 2, but not exposed as a dedicated AST entry."
+      "status": "covered",
+      "anchors": ["crates/eml-lowering/src/lib.rs:parse_function_call"],
+      "testAnchors": [
+        "tests/reference_compare.rs:paper_basis_p22_named_composition_entries_match_reference",
+        "tests/paper_reproduction.rs:paper_basis_verify_base_set_witness_chains_replay"
+      ],
+      "notes": "Named parser entry expands to (x + y) / 2 rather than adding a dedicated AST variant.",
+      "witness": {
+        "formula": "(x + y) / 2",
+        "source": "parser-composition-entry",
+        "confidence": "explicit"
+      }
     },
     {
       "name": "hypot",

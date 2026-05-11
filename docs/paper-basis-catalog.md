@@ -45,9 +45,9 @@
 | 条目               | 论文基集 | 当前状态  | 测试锚点                                                                                                                                     | 备注                                                      |
 | ------------------ | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `minus(x)`         | 是       | `covered` | 间接覆盖                                                                                                                                     | 对应 `Neg`                                                |
-| `half(x)`          | 是       | `partial` | 无独立测试                                                                                                                                   | 仓库可用 `Div(x, 2)` 表达，但没有独立 `Half` 成员         |
-| `inv(x)`           | 是       | `partial` | 间接覆盖                                                                                                                                     | lowering 内部存在 `eml_inv`，公开 AST 用 `Div(1, x)` 表达 |
-| `sqr(x)`           | 是       | `partial` | 间接覆盖                                                                                                                                     | 仓库可用 `Pow(x, 2)` 表达，但没有独立 `Sqr` 成员          |
+| `half(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Div(x, 2)`                         |
+| `inv(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Div(1, x)`                         |
+| `sqr(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Pow(x, 2)`                         |
 | `sqrt(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Sqrt`                                               |
 | `exp(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_exp_matches_complex_exp`                                           | 对应 `Exp`                                                |
 | `log(x)` / `ln(x)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_log_formula_matches_real_ln`                                       | 对应 `Log`                                                |
@@ -74,8 +74,8 @@
 | `x * y`       | 是       | `covered` | 间接覆盖                                                                                                        | 对应 `Mul`                                         |
 | `x / y`       | 是       | `covered` | 间接覆盖                                                                                                        | 对应 `Div`                                         |
 | `pow(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `bytecode_and_tree_evaluation_agree`                   | 对应 `Pow`；当前测试名仍偏 backend 一致性视角      |
-| `log_x(y)`    | 是       | `partial` | 无独立测试                                                                                                      | 可由 `log(y) / log(x)` 组合表达，但无独立 AST 成员 |
-| `avg(x, y)`   | 是       | `partial` | 无独立测试                                                                                                      | 可由 `(x + y) / 2` 组合表达，但无独立 AST 成员     |
+| `log_x(y)`    | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference` | 命名 parser 入口展开为 `log(y) / log(x)`          |
+| `avg(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference` | 命名 parser 入口展开为 `(x + y) / 2`              |
 | `hypot(x, y)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference` | 对应 `Hypot`                                      |
 
 ## 4. 仓库扩展模板（非论文原始基集）
@@ -110,8 +110,8 @@
 
 优先缺口：
 
-1. `half` / `inv` / `sqr` / `avg` / arbitrary-base `log` 仍停留在组合表达层，没有统一的 paper-basis 命名入口
-2. 多个 `paper-basis` 成员只有间接覆盖，缺少独立、可审计的见证式回归测试
+1. `asin` / `acos` / `atan` 仍缺少从公开论文来源直接抄录的显式最短 witness；当前仓库仅声明可执行 lowering witness。
+2. 后续 gate 升级仍需统一从机器可读 catalog 消费 replayed witness，避免脚本、测试、文档清单漂移。
 
 ## 6. 对后续阶段的直接输入
 
@@ -137,7 +137,9 @@
 | `-x`         | `(1 - x) - 1`                    | 仓库 `eml_neg` 显式实现                                                       | 明确找到 | 当前 lowering witness；不主张最短               |
 | `x - y`      | `eml(ln(x), exp(y))`             | 由 `eml(x, y) = exp(x) - ln(y)` 直接改写；仓库 `eml_sub` 显式实现             | 明确找到 | 这是最直接的减法 witness 之一                   |
 | `x + y`      | `x - (-y)`                       | 仓库 `eml_add` 显式实现                                                       | 明确找到 | 当前 lowering witness；通过 `sub` 与 `neg` 组合 |
+| `half(x)`    | `x / 2`                          | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
 | `1 / x`      | `exp(-ln(x))`                    | 仓库 `eml_inv` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
+| `sqr(x)`     | `x * x`                          | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
 | `x * y`      | `exp(ln(x) + ln(y))`             | 论文引言复述 exp-log 经典恒等式；仓库 `eml_mul` 显式实现                      | 明确找到 | 当前 lowering witness；不主张最短               |
 | `x / y`      | `x * (1 / y)`                    | 仓库 `eml_div` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
 | `x ^ y`      | `exp(y * ln(x))`                 | 论文把 `pow` 列入基集；仓库 `eml_pow` 显式实现                                | 明确找到 | 当前 lowering witness；基于经典恒等式           |
@@ -152,12 +154,14 @@
 | `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | 仓库 `eml_acosh` 显式实现                                                  | 明确找到 | 当前 lowering witness                           |
 | `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | 仓库 `eml_atanh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
 | `hypot(x, y)` | `sqrt(x^2 + y^2)`               | 仓库 `eml_hypot` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `log_x(y)`   | `log(y) / log(x)`                | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
+| `avg(x, y)`  | `(x + y) / 2`                    | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
 | `sigmoid(x)` | `1 / (1 + exp(-x))`              | 论文方法段明确把 logistic sigmoid 列为基集成员；仓库 `eml_sigmoid` 显式实现   | 明确找到 | 兼具 paper-basis 与训练模板双重意义             |
 
 ### 当前无法在公开来源中直接抄录显式 witness 的条目
 
 - `asin(x)` / `acos(x)` / `atan(x)`：仓库已有 lowering witness，但目前可访问论文正文更偏向“存在性与复杂度”而非直接列式。
-- `avg(x, y)` / arbitrary-base `log_x(y)`：论文将其视为 basis 成员，但当前仓库尚未把它们沉淀为独立 paper-basis 命名入口。
+- `avg(x, y)` / arbitrary-base `log_x(y)`：当前仓库提供命名 parser 入口并展开为组合表达；不新增独立 AST 变体。
 
 ### 对 P19 的直接用途
 
@@ -184,9 +188,9 @@ Purpose:
 
 ### Summary of current status
 
-- Fully covered paper-basis members include: variables, `1/-1/2/e/pi/i`, `neg`, `exp`, `log`, `sqrt`, `sin/cos/tan`, `sinh/cosh/tanh`, `asin/acos/atan`, `sigmoid`, and the basic arithmetic operators plus `pow`.
-- Partial coverage currently applies to: `half`, `inv`, `sqr`, arbitrary-base `log`, and `avg` because they are representable through combinations but not exposed as dedicated paper-basis members.
-- Missing paper-basis members currently include: none as direct public AST/lowering entries; remaining gaps are naming/governance items such as `half`, `inv`, `sqr`, `avg`, and arbitrary-base `log`.
+- Fully covered paper-basis members include: variables, `1/-1/2/e/pi/i`, `neg`, `half`, `inv`, `sqr`, `sqrt`, `exp`, `log`, `sin/cos/tan`, `sinh/cosh/tanh`, `asin/acos/atan`, `asinh/acosh/atanh`, `sigmoid`, the basic arithmetic operators, `pow`, arbitrary-base `log`, `avg`, and `hypot`.
+- Composition-only paper-basis names such as `half`, `inv`, `sqr`, `avg`, and arbitrary-base `log` are exposed through named parser entries that expand to existing AST combinations instead of dedicated variants.
+- Missing paper-basis members currently include: none as direct public source/lowering entries.
 
 ### Representative witness formulas and sources
 
@@ -204,7 +208,9 @@ This first witness set records auditable formulas using three source tiers:
 | `-x`         | `(1 - x) - 1`                    | explicit current lowering helper `eml_neg`                                            | explicit   | repository witness, not claimed shortest |
 | `x - y`      | `eml(ln(x), exp(y))`             | direct algebraic rewrite of the EML definition; explicit helper `eml_sub`             | explicit   | direct subtraction witness               |
 | `x + y`      | `x - (-y)`                       | explicit helper `eml_add`                                                             | explicit   | repository witness                       |
+| `half(x)`    | `x / 2`                          | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
 | `1 / x`      | `exp(-ln(x))`                    | explicit helper `eml_inv`                                                             | explicit   | repository witness                       |
+| `sqr(x)`     | `x * x`                          | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
 | `x * y`      | `exp(ln(x) + ln(y))`             | classical exp-log identity echoed in paper introduction; explicit helper `eml_mul`    | explicit   | repository witness, not claimed shortest |
 | `x / y`      | `x * (1 / y)`                    | explicit helper `eml_div`                                                             | explicit   | repository witness                       |
 | `x ^ y`      | `exp(y * ln(x))`                 | `pow` is part of the paper basis; explicit helper `eml_pow`                           | explicit   | repository witness                       |
@@ -219,12 +225,14 @@ This first witness set records auditable formulas using three source tiers:
 | `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | explicit helper `eml_acosh`                                                         | explicit   | repository witness                       |
 | `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | explicit helper `eml_atanh`                                                            | explicit   | repository witness                       |
 | `hypot(x, y)` | `sqrt(x^2 + y^2)`               | explicit helper `eml_hypot`                                                            | explicit   | repository witness                       |
+| `log_x(y)`   | `log(y) / log(x)`                | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
+| `avg(x, y)`  | `(x + y) / 2`                    | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
 | `sigmoid(x)` | `1 / (1 + exp(-x))`              | logistic sigmoid is explicitly part of the paper basis; explicit helper `eml_sigmoid` | explicit   | both paper-basis and training-relevant   |
 
 ### Items whose explicit public witnesses are still not transcribed here
 
 - `asin(x)` / `acos(x)` / `atan(x)`: the repository has lowering witnesses, but the paper material currently available to this workflow is stronger on existence and complexity than on directly printed formulas.
-- `avg(x, y)` and arbitrary-base `log_x(y)`: included in the paper basis, but not yet surfaced as dedicated paper-basis entries in the repository.
+- `avg(x, y)` and arbitrary-base `log_x(y)`: surfaced as named parser entries that expand to existing AST combinations rather than dedicated variants.
 
 ### Repository extensions outside the original paper basis
 

@@ -216,7 +216,7 @@
 
 - [x] 为 `asinh` / `acosh` / `atanh` 增加公开 `SourceExpr`、parser、eval、symbolic derivative 与 lowering 入口，并补 paper-basis 回归测试
 - [x] 为 `hypot(x, y)` 增加公开 AST / parser / eval / lowering 入口，明确它属于 paper-basis 而非 runtime 性能模板
-- [ ] 为 `half` / `inv` / `sqr` / `avg` / arbitrary-base `log_x(y)` 建立统一的 paper-basis 命名入口或明确维持组合表达的治理理由
+- [x] 为 `half` / `inv` / `sqr` / `avg` / arbitrary-base `log_x(y)` 建立统一的 paper-basis 命名入口或明确维持组合表达的治理理由
 - [x] 更新 `docs/paper-basis-catalog.*`，把 P22 新覆盖项从 `missing` / `partial` 调整为 `covered`，并补充对应 witness 与测试锚点
 - [x] 将 P22 新增能力纳入 `tests/paper_reproduction.rs` 第二批 witness replay，覆盖负实轴、零邻域与复平面分支语义
 

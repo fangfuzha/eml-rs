@@ -92,6 +92,11 @@ fn eml_sqrt_witness(argument: LoweredExpr) -> LoweredExpr {
     eml_pow_witness(argument, eml_inv_witness(two))
 }
 
+/// Builds the EML constant `2`.
+fn two() -> LoweredExpr {
+    eml_add_witness(one(), one())
+}
+
 /// Builds the representative witness for `exp(x)`.
 fn witness_exp() -> LoweredExpr {
     eml_exp_witness(var_x())
@@ -127,6 +132,21 @@ fn witness_pow() -> LoweredExpr {
     eml_pow_witness(var_x(), var_y())
 }
 
+/// Builds the representative witness for `half(x)`.
+fn witness_half() -> LoweredExpr {
+    eml_div_witness(var_x(), two())
+}
+
+/// Builds the representative witness for `inv(x)`.
+fn witness_inv() -> LoweredExpr {
+    eml_inv_witness(var_x())
+}
+
+/// Builds the representative witness for `sqr(x)`.
+fn witness_sqr() -> LoweredExpr {
+    eml_mul_witness(var_x(), var_x())
+}
+
 /// Builds the representative witness for `asinh(x)`.
 fn witness_asinh() -> LoweredExpr {
     let squared = eml_mul_witness(var_x(), var_x());
@@ -159,6 +179,16 @@ fn witness_hypot() -> LoweredExpr {
     eml_sqrt_witness(eml_add_witness(x2, y2))
 }
 
+/// Builds the representative witness for `avg(x, y)`.
+fn witness_avg() -> LoweredExpr {
+    eml_div_witness(eml_add_witness(var_x(), var_y()), two())
+}
+
+/// Builds the representative witness for arbitrary-base `log_x(y)`.
+fn witness_log_base() -> LoweredExpr {
+    eml_div_witness(eml_log_witness(var_y()), eml_log_witness(var_x()))
+}
+
 /// Returns deterministic samples covering the paper-fidelity domains.
 fn paper_samples() -> [PaperSample; 4] {
     [
@@ -182,7 +212,7 @@ fn paper_samples() -> [PaperSample; 4] {
 }
 
 /// Returns the first completeness harness cases for representative witnesses.
-fn witness_cases() -> [PaperWitnessCase; 11] {
+fn witness_cases() -> [PaperWitnessCase; 16] {
     [
         PaperWitnessCase {
             name: "exp",
@@ -248,6 +278,33 @@ fn witness_cases() -> [PaperWitnessCase; 11] {
             build_witness: witness_pow,
         },
         PaperWitnessCase {
+            name: "half",
+            catalog_name: "half",
+            catalog_section: "unaryFunctions",
+            source_formula: "half(x)",
+            witness_formula: "x / 2",
+            tolerance: 2e-8,
+            build_witness: witness_half,
+        },
+        PaperWitnessCase {
+            name: "inv",
+            catalog_name: "inv",
+            catalog_section: "unaryFunctions",
+            source_formula: "inv(x)",
+            witness_formula: "exp(-ln(x))",
+            tolerance: 5e-8,
+            build_witness: witness_inv,
+        },
+        PaperWitnessCase {
+            name: "sqr",
+            catalog_name: "sqr",
+            catalog_section: "unaryFunctions",
+            source_formula: "sqr(x)",
+            witness_formula: "x * x",
+            tolerance: 5e-7,
+            build_witness: witness_sqr,
+        },
+        PaperWitnessCase {
             name: "asinh",
             catalog_name: "asinh",
             catalog_section: "unaryFunctions",
@@ -282,6 +339,24 @@ fn witness_cases() -> [PaperWitnessCase; 11] {
             witness_formula: "sqrt(x^2 + y^2)",
             tolerance: 5e-6,
             build_witness: witness_hypot,
+        },
+        PaperWitnessCase {
+            name: "log_base",
+            catalog_name: "log_base",
+            catalog_section: "binaryOperations",
+            source_formula: "log_x(x, y)",
+            witness_formula: "log(y) / log(x)",
+            tolerance: 5e-6,
+            build_witness: witness_log_base,
+        },
+        PaperWitnessCase {
+            name: "avg",
+            catalog_name: "avg",
+            catalog_section: "binaryOperations",
+            source_formula: "avg(x, y)",
+            witness_formula: "(x + y) / 2",
+            tolerance: 2e-8,
+            build_witness: witness_avg,
         },
     ]
 }

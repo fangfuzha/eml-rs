@@ -1906,6 +1906,18 @@ fn parse_function_call(name: &str, args: Vec<SourceExpr>) -> Result<SourceExpr, 
         ("asinh", 1) => Ok(SourceExpr::Asinh(Box::new(args[0].clone()))),
         ("acosh", 1) => Ok(SourceExpr::Acosh(Box::new(args[0].clone()))),
         ("atanh", 1) => Ok(SourceExpr::Atanh(Box::new(args[0].clone()))),
+        ("half", 1) => Ok(SourceExpr::Div(
+            Box::new(args[0].clone()),
+            Box::new(SourceExpr::Int(2)),
+        )),
+        ("inv", 1) | ("recip", 1) => Ok(SourceExpr::Div(
+            Box::new(SourceExpr::Int(1)),
+            Box::new(args[0].clone()),
+        )),
+        ("sqr", 1) | ("square", 1) => Ok(SourceExpr::Pow(
+            Box::new(args[0].clone()),
+            Box::new(SourceExpr::Int(2)),
+        )),
         ("sqrt", 1) => Ok(SourceExpr::Sqrt(Box::new(args[0].clone()))),
         ("sigmoid", 1) => Ok(SourceExpr::Sigmoid(Box::new(args[0].clone()))),
         ("softplus", 1) => Ok(SourceExpr::Softplus(Box::new(args[0].clone()))),
@@ -1937,6 +1949,17 @@ fn parse_function_call(name: &str, args: Vec<SourceExpr>) -> Result<SourceExpr, 
         ("hypot", 2) => Ok(SourceExpr::Hypot(
             Box::new(args[0].clone()),
             Box::new(args[1].clone()),
+        )),
+        ("avg", 2) | ("mean", 2) => Ok(SourceExpr::Div(
+            Box::new(SourceExpr::Add(
+                Box::new(args[0].clone()),
+                Box::new(args[1].clone()),
+            )),
+            Box::new(SourceExpr::Int(2)),
+        )),
+        ("log_base", 2) | ("log_x", 2) | ("logx", 2) => Ok(SourceExpr::Div(
+            Box::new(SourceExpr::Log(Box::new(args[1].clone()))),
+            Box::new(SourceExpr::Log(Box::new(args[0].clone()))),
         )),
         ("add", 2) | ("plus", 2) => Ok(SourceExpr::Add(
             Box::new(args[0].clone()),
@@ -2108,6 +2131,19 @@ mod tests {
         let vars = [Complex64::new(0.35, 0.1), Complex64::new(1.4, -0.2)];
         let value = eval_source_expr_complex(&src, &vars).unwrap();
         assert!(value.re.is_finite() && value.im.is_finite());
+    }
+
+    #[test]
+    fn eval_reference_for_named_paper_basis_composition_entries() {
+        let src = parse_source_expr("half(x0) + inv(x1) + sqr(x0) + avg(x0, x1) + log_x(x1, x0)")
+            .unwrap();
+        let manual =
+            parse_source_expr("x0 / 2 + 1 / x1 + x0^2 + (x0 + x1) / 2 + log(x0) / log(x1)")
+                .unwrap();
+        let vars = [Complex64::new(0.35, 0.1), Complex64::new(1.4, -0.2)];
+        let value = eval_source_expr_complex(&src, &vars).unwrap();
+        let expected = eval_source_expr_complex(&manual, &vars).unwrap();
+        assert!((value - expected).norm() <= 1e-12);
     }
 
     #[test]
