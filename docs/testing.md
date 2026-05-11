@@ -38,6 +38,7 @@
 - 重点门禁仍聚焦：`shared_eml_*`、`softmax_ce_*_batch1024`、`lower_verify_10k_nodes`
 - Tree/RPN 阈值拐点与 Bytecode 并行候选评估已拆到 `cargo bench --bench parallel_bench`；Linux 上使用 `nightly.yml` 的 `parallel-bench-only` 手动入口运行，不直接纳入主 gate。
 - `parallel-bench-only` 会额外产出 `target/parallel-bench-summary.json` 并上传 artifact，包含 Tree/RPN 阈值比值、Bytecode `off/auto/force` 三路对比摘要，以及当前默认策略配置与各 batch 的 median winner。
+- workflow 日志还会打印 `[parallel-summary] ...` 的简明推荐行，便于快速判断是否需要复审默认并行策略；如后续要门禁化，可直接复用脚本的 `--require-*` 选项。
 
 ### 依赖安全与许可证
 
@@ -82,6 +83,7 @@
 - Primary blocking workloads remain: `shared_eml_*`, `softmax_ce_*_batch1024`, `lower_verify_10k_nodes`
 - Tree/RPN threshold probing and Bytecode parallel candidate evaluation live in `cargo bench --bench parallel_bench`; on Linux they run through the manual `parallel-bench-only` target in `nightly.yml` and stay outside the main blocking gate for now.
 - `parallel-bench-only` also emits `target/parallel-bench-summary.json` as an artifact so future threshold tuning can consume machine-readable comparisons instead of scraping logs; the summary includes Tree/RPN ratios, Bytecode `off/auto/force` comparisons, the configured default policy, and per-batch median winners.
+- The workflow logs also print concise `[parallel-summary] ...` recommendation lines. If this needs to become a gate later, the same script already exposes `--require-*` checks for reuse.
 
 ### Dependency Security And Licensing
 

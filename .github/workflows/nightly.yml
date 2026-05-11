@@ -232,7 +232,7 @@ jobs:
       - name: Run experimental parallel benchmarks
         run: cargo bench --bench parallel_bench
       - name: Summarize parallel benchmark results
-        run: python3 scripts/parallel_bench_summary.py --criterion-dir target/criterion --output target/parallel-bench-summary.json
+        run: python3 scripts/parallel_bench_summary.py --criterion-dir target/criterion --output target/parallel-bench-summary.json --print-recommendation
       - name: Upload parallel benchmark summary
         uses: actions/upload-artifact@v7
         with:
