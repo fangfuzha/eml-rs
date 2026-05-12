@@ -47,10 +47,10 @@ println!("{value}");
 
 - Stable API：默认选择 `compile()`、`PipelineBuilder`、`CompiledPipeline`、`BuiltinBackend`、`PipelineOptions`、`error::*`、`core::EvalPolicy`。
 - Experimental API：研究时可使用 `ir`、`bytecode`、`lowering`、`opt`、`verify`、`profiling`、`plugin`，但升级前要阅读 release notes。
-- 互操作导出：使用 `portable` 模块把 `SourceExpr` 或 `Expr` 导出为 portable graph JSON。
+- 互操作导出：优先用 `eml export portable` 生成 portable graph JSON；Rust 内部研究或集成测试再直接使用 `portable` 模块。
 - Internal API：不建议生产代码依赖；若必须使用，应锁定精确 patch 版本。
 
-`compile_expression()` 是 deprecated 流程示例；新代码应使用 `compile()`。
+`compile_expression()` 是 deprecated 流程示例；新代码应使用 `compile()`。该别名在 `0.2.x` 周期继续保留，最早移除目标为 `0.3.0` 或之后版本。
 
 ### 最佳实践
 
@@ -117,10 +117,10 @@ println!("{value}");
 
 - Stable API: default to `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, and `core::EvalPolicy`.
 - Experimental API: use `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, and `plugin` for research, but read release notes before upgrading.
-- Interop export: use the `portable` module to export `SourceExpr` or `Expr` into portable graph JSON.
+- Interop export: prefer `eml export portable` for portable graph JSON; use the `portable` module directly for Rust-side research or integration tests.
 - Internal API: not recommended for production dependencies; pin an exact patch version if you must use it.
 
-`compile_expression()` is a deprecation workflow example. New code should use `compile()`.
+`compile_expression()` is a deprecation workflow example. New code should use `compile()`. The alias remains available throughout the `0.2.x` cycle; the earliest removal target is `0.3.0` or later.
 
 ### Best Practices
 

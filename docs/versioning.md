@@ -31,6 +31,7 @@
 4. 删除前在发布说明中给出替代路径。
 
 当前代码级流程示例是 `eml_rs::api::compile_expression()`，替代入口是 `eml_rs::api::compile()`。
+`0.2.x` 周期继续保留该别名；最早移除目标为 `0.3.0` 或之后版本，删除前必须再次在发布说明中提示。
 
 ### API 分层
 
@@ -70,7 +71,7 @@
 3. Keep it for at least one minor cycle.
 4. Provide a replacement path before removal.
 
-The current code-level workflow example is `eml_rs::api::compile_expression()`, replaced by `eml_rs::api::compile()`.
+The current code-level workflow example is `eml_rs::api::compile_expression()`, replaced by `eml_rs::api::compile()`. The alias remains available throughout the `0.2.x` cycle; the earliest removal target is `0.3.0` or later, with another release-notes reminder before deletion.
 
 ### API Tiers
 

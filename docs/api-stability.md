@@ -8,31 +8,39 @@
 
 稳定入口优先保证语义和迁移路径。`0.x` 阶段仍允许 minor 版本调整，但必须给迁移说明。
 
-| 入口 | 用途 | 稳定性 |
-| --- | --- | --- |
-| `eml_rs::api::compile()` | 一行编译表达式，推荐默认入口 | Stable API |
-| `eml_rs::api::PipelineBuilder` | 可配置 pipeline，支持 options/pass/observer | Stable API |
-| `eml_rs::api::CompiledPipeline` | 编译产物，提供 eval/report/verify/profile | Stable API |
-| `eml_rs::api::BuiltinBackend` | Tree/RPN/Bytecode 后端枚举 | Stable API |
-| `eml_rs::api::PipelineOptions` | 编译和执行策略配置 | Stable API |
-| `eml_rs::error::*` | Rust 错误类型、错误码、诊断结构 | Stable API |
-| `eml_rs::core::EvalPolicy` | 复对数分支和特殊值策略 | Stable API |
+| 入口                            | 用途                                        | 稳定性     |
+| ------------------------------- | ------------------------------------------- | ---------- |
+| `eml_rs::api::compile()`        | 一行编译表达式，推荐默认入口                | Stable API |
+| `eml_rs::api::PipelineBuilder`  | 可配置 pipeline，支持 options/pass/observer | Stable API |
+| `eml_rs::api::CompiledPipeline` | 编译产物，提供 eval/report/verify/profile   | Stable API |
+| `eml_rs::api::BuiltinBackend`   | Tree/RPN/Bytecode 后端枚举                  | Stable API |
+| `eml_rs::api::PipelineOptions`  | 编译和执行策略配置                          | Stable API |
+| `eml_rs::error::*`              | Rust 错误类型、错误码、诊断结构             | Stable API |
+| `eml_rs::core::EvalPolicy`      | 复对数分支和特殊值策略                      | Stable API |
+
+README 推荐的常规工作流已经可由 Stable API 覆盖：`compile()` 用于默认编译，`PipelineBuilder` 用于配置策略和 observer，`CompiledPipeline` 用于 eval / verify / profile。用户只有在研究 IR、写外部图桥接或调试 lowering 时才需要下沉到 Experimental API。
 
 ### Experimental API
 
 实验入口服务研究场景，允许更快演进。使用者应固定 crate 版本，并在升级时阅读 release notes。
 
-| 入口 | 用途 | 风险 |
-| --- | --- | --- |
-| `eml_rs::ir::*` | 运行时 EML IR、RPN、统计 | IR 结构可能随优化器调整 |
-| `eml_rs::bytecode::*` | 寄存器字节码和指令集 | 指令布局可能变化 |
-| `eml_rs::lowering::*` | parser/lowering/autodiff/template re-export | 模板和 lowering 近似可能变化 |
-| `eml_rs::opt::*` | 源级重写、代价模型 | 规则和 cost 权重会继续实验 |
-| `eml_rs::verify::*` | 数值对照工具 | 报告字段可扩展 |
-| `eml_rs::profiling::*` | compile/eval/verify 指标 | 指标字段可扩展 |
-| `eml_rs::portable::*` | portable graph JSON 导出 | schema v1 稳定，字段可扩展 |
-| `eml_rs::plugin::*` | pass/backend/observer 扩展点 | trait 可能补方法 |
-| `eml_rs::ffi::*` | Rust 侧 FFI 类型定义 | C ABI 以 `include/eml_rs.h` 为准 |
+| 入口                   | 用途                                        | 风险                             |
+| ---------------------- | ------------------------------------------- | -------------------------------- |
+| `eml_rs::ir::*`        | 运行时 EML IR、RPN、统计                    | IR 结构可能随优化器调整          |
+| `eml_rs::bytecode::*`  | 寄存器字节码和指令集                        | 指令布局可能变化                 |
+| `eml_rs::lowering::*`  | parser/lowering/autodiff/template re-export | 模板和 lowering 近似可能变化     |
+| `eml_rs::opt::*`       | 源级重写、代价模型                          | 规则和 cost 权重会继续实验       |
+| `eml_rs::verify::*`    | 数值对照工具                                | 报告字段可扩展                   |
+| `eml_rs::profiling::*` | compile/eval/verify 指标                    | 指标字段可扩展                   |
+| `eml_rs::portable::*`  | portable graph JSON 导出                    | schema v1 稳定，字段可扩展       |
+| `eml_rs::plugin::*`    | pass/backend/observer 扩展点                | trait 可能补方法                 |
+| `eml_rs::ffi::*`       | Rust 侧 FFI 类型定义                        | C ABI 以 `include/eml_rs.h` 为准 |
+
+### Portable Graph 与 CLI 导出稳定性
+
+`eml_rs::portable::*` 仍按 Experimental API 管理，因为 Rust 侧 helper 可能随研究场景扩展；但 portable graph `schema = eml-rs.portable-graph.v1` 的顶层字段、节点后序编号、`source_expr` / `eml_expr` 图类型和已支持 op 名称在 `0.2.x` 周期内按稳定交换格式处理。
+
+`eml export portable <expr> [--kind source|eml]` 使用同一份 schema。外部消费者应检查 `schema`，忽略未知可选字段，并通过 `validate_portable_json()` 或等价校验保护输入。若后续引入 schema v2，v1 导出和迁移说明至少保留一个 minor 周期。
 
 ### Internal API
 
@@ -58,6 +66,7 @@ let replacement = eml_rs::api::compile("exp(x0)")?;
 ```
 
 `compile_expression()` 只是 `compile()` 的兼容别名，用来验证弃用流程；新代码应直接调用 `compile()`。
+它将在整个 `0.2.x` 周期继续保留，最早只会在 `0.3.0` 或之后版本移除，且删除前必须在 release notes 再次提示。
 
 ## English
 
@@ -67,31 +76,39 @@ This document defines the public API tiers for the `0.x` phase. The goal is not 
 
 Stable entries prioritize semantic continuity and migration paths. During `0.x`, minor releases may still adjust APIs, but migration notes are required.
 
-| Entry | Purpose | Stability |
-| --- | --- | --- |
-| `eml_rs::api::compile()` | One-line expression compilation; recommended default entry | Stable API |
-| `eml_rs::api::PipelineBuilder` | Configurable pipeline with options/passes/observers | Stable API |
-| `eml_rs::api::CompiledPipeline` | Compiled artifact for eval/report/verify/profile | Stable API |
-| `eml_rs::api::BuiltinBackend` | Tree/RPN/Bytecode backend selector | Stable API |
-| `eml_rs::api::PipelineOptions` | Compile and evaluation policy options | Stable API |
-| `eml_rs::error::*` | Rust error types, codes, and diagnostics | Stable API |
-| `eml_rs::core::EvalPolicy` | Complex-log branch and special-value policy | Stable API |
+| Entry                           | Purpose                                                    | Stability  |
+| ------------------------------- | ---------------------------------------------------------- | ---------- |
+| `eml_rs::api::compile()`        | One-line expression compilation; recommended default entry | Stable API |
+| `eml_rs::api::PipelineBuilder`  | Configurable pipeline with options/passes/observers        | Stable API |
+| `eml_rs::api::CompiledPipeline` | Compiled artifact for eval/report/verify/profile           | Stable API |
+| `eml_rs::api::BuiltinBackend`   | Tree/RPN/Bytecode backend selector                         | Stable API |
+| `eml_rs::api::PipelineOptions`  | Compile and evaluation policy options                      | Stable API |
+| `eml_rs::error::*`              | Rust error types, codes, and diagnostics                   | Stable API |
+| `eml_rs::core::EvalPolicy`      | Complex-log branch and special-value policy                | Stable API |
+
+The README-recommended workflow is covered by Stable API entries: `compile()` handles default compilation, `PipelineBuilder` handles options and observers, and `CompiledPipeline` handles eval / verify / profile. Users only need Experimental API for IR research, external graph bridges, or lowering/debugging work.
 
 ### Experimental API
 
 Experimental entries serve research workflows and may evolve faster. Pin the crate version and read release notes before upgrading.
 
-| Entry | Purpose | Risk |
-| --- | --- | --- |
-| `eml_rs::ir::*` | Runtime EML IR, RPN, and stats | IR shape may change with optimizers |
-| `eml_rs::bytecode::*` | Register bytecode and instruction set | Instruction layout may change |
-| `eml_rs::lowering::*` | Parser/lowering/autodiff/template re-export | Templates and approximations may change |
-| `eml_rs::opt::*` | Source rewrites and cost model | Rules and weights are still experimental |
-| `eml_rs::verify::*` | Numerical comparison helpers | Report fields may expand |
-| `eml_rs::profiling::*` | Compile/eval/verify metrics | Metric fields may expand |
-| `eml_rs::portable::*` | Portable graph JSON export | Schema v1 is stable; fields may expand |
-| `eml_rs::plugin::*` | Pass/backend/observer extension points | Traits may gain methods |
-| `eml_rs::ffi::*` | Rust-side FFI type definitions | The C ABI is defined by `include/eml_rs.h` |
+| Entry                  | Purpose                                     | Risk                                       |
+| ---------------------- | ------------------------------------------- | ------------------------------------------ |
+| `eml_rs::ir::*`        | Runtime EML IR, RPN, and stats              | IR shape may change with optimizers        |
+| `eml_rs::bytecode::*`  | Register bytecode and instruction set       | Instruction layout may change              |
+| `eml_rs::lowering::*`  | Parser/lowering/autodiff/template re-export | Templates and approximations may change    |
+| `eml_rs::opt::*`       | Source rewrites and cost model              | Rules and weights are still experimental   |
+| `eml_rs::verify::*`    | Numerical comparison helpers                | Report fields may expand                   |
+| `eml_rs::profiling::*` | Compile/eval/verify metrics                 | Metric fields may expand                   |
+| `eml_rs::portable::*`  | Portable graph JSON export                  | Schema v1 is stable; fields may expand     |
+| `eml_rs::plugin::*`    | Pass/backend/observer extension points      | Traits may gain methods                    |
+| `eml_rs::ffi::*`       | Rust-side FFI type definitions              | The C ABI is defined by `include/eml_rs.h` |
+
+### Portable Graph And CLI Export Stability
+
+`eml_rs::portable::*` remains Experimental API because Rust-side helpers may grow with research workflows. The portable graph `schema = eml-rs.portable-graph.v1`, however, treats top-level fields, post-order node numbering, `source_expr` / `eml_expr` graph kinds, and currently supported op names as a stable exchange format throughout the `0.2.x` cycle.
+
+`eml export portable <expr> [--kind source|eml]` emits the same schema. External consumers should check `schema`, ignore unknown optional fields, and protect inputs with `validate_portable_json()` or an equivalent validator. If a schema v2 appears later, v1 export and migration notes must remain available for at least one minor cycle.
 
 ### Internal API
 
@@ -117,3 +134,4 @@ let replacement = eml_rs::api::compile("exp(x0)")?;
 ```
 
 `compile_expression()` is only a compatibility alias for `compile()` to exercise the deprecation workflow. New code should call `compile()` directly.
+It remains available throughout the `0.2.x` cycle; the earliest removal target is `0.3.0` or later, with another release-notes reminder before deletion.

@@ -43,6 +43,21 @@ cargo run --bin eml -- lower "softplus(x0) + sigmoid(x0)"
 - `ExprStats`: 节点数、深度、公共子树统计。
 - `source_nodes` / `optimized_source_nodes`: lowering 前后的源表达式规模。
 
+### `eml export portable`
+
+把源表达式导出为 portable graph JSON，便于交给 `scripts/reference_compare.py`、PyTorch/NumPy 对照脚本或外部图工具消费。默认导出 `source_expr`，会保留源算子；加 `--kind eml` 时先执行优化与 lowering，再导出纯 EML `Expr` 图。
+
+```bash
+cargo run --bin eml -- export portable "hypot(x0, x1)"
+cargo run --bin eml -- export portable "exp(x0) - log(x1)" --kind eml
+```
+
+输出是 pretty JSON，顶层包含：
+
+- `schema`: 当前为 `eml-rs.portable-graph.v1`。
+- `graph_kind`: `source_expr` 或 `eml_expr`。
+- `root` / `nodes`: 后序节点图。
+
 ### `eml verify`
 
 读取实数样本 JSON，把样本转为复数输入，并分别验证 Tree、RPN、Bytecode 三个后端是否与优化后的源表达式参考值一致。默认使用 strict 策略；当纯 EML 展开存在可去奇点中间值时，可以加 `--relaxed`。
@@ -120,6 +135,21 @@ The output includes:
 - `Expr`: lowered EML IR.
 - `ExprStats`: node count, depth, and subtree statistics.
 - `source_nodes` / `optimized_source_nodes`: source size before and after optimization.
+
+### `eml export portable`
+
+Export an expression as portable graph JSON for `scripts/reference_compare.py`, PyTorch/NumPy reference checks, or external graph tooling. The default output is `source_expr`, preserving source operators. Use `--kind eml` to optimize and lower first, then export the pure EML `Expr` graph.
+
+```bash
+cargo run --bin eml -- export portable "hypot(x0, x1)"
+cargo run --bin eml -- export portable "exp(x0) - log(x1)" --kind eml
+```
+
+The output is pretty JSON with:
+
+- `schema`: currently `eml-rs.portable-graph.v1`.
+- `graph_kind`: `source_expr` or `eml_expr`.
+- `root` / `nodes`: the post-order graph representation.
 
 ### `eml verify`
 

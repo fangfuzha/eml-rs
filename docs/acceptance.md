@@ -42,9 +42,9 @@
 
 | 类别                     | 门槛                              | 执行方式                                                                                                                           |
 | ------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `verify + lowering` 延迟 | `10k nodes` 基准 `P99 <= 25ms`    | `CI enforced`：`lower_verify_10k_nodes`                                                                                            |
-| `bytecode/tree` 比值     | `median <= 0.85` 且 `P99 <= 0.95` | `nightly/workflow_dispatch enforced`：`shared_eml_*` 与 `softmax_ce_*_batch1024` 基准门禁                                           |
-| `RPN/tree` 比值          | `median <= 1.10`                  | `nightly/workflow_dispatch enforced`：`eml_ln_rpn_eval` 对比门禁                                                                    |
+| `verify + lowering` 延迟 | `10k nodes` 基准 `P99 <= 25ms`    | `nightly/workflow_dispatch enforced`：`lower_verify_10k_nodes`                                                                     |
+| `bytecode/tree` 比值     | `median <= 0.85` 且 `P99 <= 0.95` | `nightly/workflow_dispatch enforced`：`shared_eml_*` 与 `softmax_ce_*_batch1024` 基准门禁                                          |
+| `RPN/tree` 比值          | `median <= 1.10`                  | `nightly/workflow_dispatch enforced`：`eml_ln_rpn_eval` 对比门禁                                                                   |
 | 峰值内存                 | `1M nodes <= 1.0GB`               | `manual tool enforced`：`python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`；nightly 使用 `100k nodes` 轻量采样 |
 | 冷启动                   | `<= 800ms`                        | `manual tool enforced`：`python3 scripts/collect_metrics.py` 输出 `cold_start.median_ms` 并按阈值返回状态                          |
 
@@ -123,9 +123,9 @@ Recommended `v0.2.0` research target: auditable paper reproduction. At minimum, 
 
 | Category                    | Threshold                                   | Enforcement                                                                                                                                    |
 | --------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verify + lowering` latency | `P99 <= 25ms` for the `10k nodes` benchmark | `CI enforced`: `lower_verify_10k_nodes`                                                                                                        |
-| `bytecode/tree` ratio       | `median <= 0.85` and `P99 <= 0.95`          | `nightly/workflow_dispatch enforced`: `shared_eml_*` and `softmax_ce_*_batch1024` benchmark gate                                                |
-| `RPN/tree` ratio            | `median <= 1.10`                            | `nightly/workflow_dispatch enforced`: `eml_ln_rpn_eval` ratio gate                                                                              |
+| `verify + lowering` latency | `P99 <= 25ms` for the `10k nodes` benchmark | `nightly/workflow_dispatch enforced`: `lower_verify_10k_nodes`                                                                                 |
+| `bytecode/tree` ratio       | `median <= 0.85` and `P99 <= 0.95`          | `nightly/workflow_dispatch enforced`: `shared_eml_*` and `softmax_ce_*_batch1024` benchmark gate                                               |
+| `RPN/tree` ratio            | `median <= 1.10`                            | `nightly/workflow_dispatch enforced`: `eml_ln_rpn_eval` ratio gate                                                                             |
 | Peak memory                 | `1M nodes <= 1.0GB`                         | `manual tool enforced`: `python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`; nightly uses a lightweight `100k nodes` sample |
 | Cold start                  | `<= 800ms`                                  | `manual tool enforced`: `python3 scripts/collect_metrics.py` emits `cold_start.median_ms` and exits according to the threshold                 |
 

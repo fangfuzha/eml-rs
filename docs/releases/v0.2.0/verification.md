@@ -27,6 +27,17 @@
 - README、`docs/user-guide.md`、`docs/developer-guide.md`、`docs/releases/v0.2.0/` 均能指向 `paper-basis` 入口。
 - 发布说明中必须明确：`repo-extension` 训练模板不属于论文基集完备性声明。
 
+### 2026-05-12 本地验证记录
+
+- `cargo fmt --check` 通过。
+- `cargo test --all-targets` 通过；其中 `tests/paper_reproduction.rs`、CLI、portable graph、reference compare 等集成测试均通过。
+- `cargo clippy --all-targets -- -D warnings` 通过。
+- `RUSTDOCFLAGS=-D warnings cargo doc --workspace --no-deps` 通过。
+- `cargo test --test paper_reproduction` 单独通过，3 个 paper-basis witness 测试全部成功。
+- `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` 通过；本地产物为 `eml-rs.paper-reproduction-summary.v2`，catalog 覆盖率 `36/36`，`missing=0`，`partial=0`。
+- `python scripts/sr_research_benchmark.py --samples 41 --steps 80 --output-json target/sr-research-benchmark.json --output-md target/sr-research-benchmark.md` 通过；本地产物为 `eml-rs.sr-research-benchmark.v2`，包含 `snapping_rules` 与 `task_metrics`。
+- 使用 `gh` 下载了 run `25716323482` 的 `nightly-paper-reproduction-summary` 与 `nightly-sr-research-summary`，确认 artifact 可下载。该远端 run 来自当前远端 `main` 的旧提交，产物仍是 v1 schema；v2 schema 的多轮远端稳定性需要在本次变更合入并触发新的 nightly / `workflow_dispatch` 后继续核验。
+
 ## English
 
 ### Local / CI Code Validation
@@ -53,3 +64,14 @@
 - The nightly / `workflow_dispatch` `sr-research-benchmark` artifact must be downloadable.
 - `README.md`, `docs/user-guide.md`, `docs/developer-guide.md`, and `docs/releases/v0.2.0/` must all point users toward the `paper-basis` entry points.
 - Release notes must explicitly state that `repo-extension` training templates are outside any paper-basis completeness claim.
+
+### 2026-05-12 Local Verification Record
+
+- `cargo fmt --check` passed.
+- `cargo test --all-targets` passed, including `tests/paper_reproduction.rs`, CLI, portable graph, and reference-compare integration tests.
+- `cargo clippy --all-targets -- -D warnings` passed.
+- `RUSTDOCFLAGS=-D warnings cargo doc --workspace --no-deps` passed.
+- `cargo test --test paper_reproduction` passed separately, with all 3 paper-basis witness tests successful.
+- `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` passed; the local artifact is `eml-rs.paper-reproduction-summary.v2` with catalog coverage `36/36`, `missing=0`, and `partial=0`.
+- `python scripts/sr_research_benchmark.py --samples 41 --steps 80 --output-json target/sr-research-benchmark.json --output-md target/sr-research-benchmark.md` passed; the local artifact is `eml-rs.sr-research-benchmark.v2` and includes `snapping_rules` plus `task_metrics`.
+- `gh` successfully downloaded `nightly-paper-reproduction-summary` and `nightly-sr-research-summary` from run `25716323482`. That remote run comes from the current remote `main` before this change and still emits v1 schema artifacts; multi-run remote stability for v2 schema must be checked after this change lands and a new nightly / `workflow_dispatch` run completes.

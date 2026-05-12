@@ -42,7 +42,7 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - 验收标准见 `docs/acceptance.md`
 - 版本与兼容策略见 `docs/versioning.md`
 - 质量矩阵见 `docs/testing.md`
-- `v0.2.0` 发布准备草案见 `docs/releases/v0.2.0/README.md`
+- `v0.2.0` 发布快照见 `docs/releases/v0.2.0/README.md`
 - 维护与安全响应见 `CONTRIBUTING.md` / `SECURITY.md`
 
 ## English
@@ -87,5 +87,5 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - Acceptance criteria: `docs/acceptance.md`
 - Versioning and compatibility: `docs/versioning.md`
 - Quality matrix: `docs/testing.md`
-- `v0.2.0` release-preparation draft: `docs/releases/v0.2.0/README.md`
+- `v0.2.0` release snapshot: `docs/releases/v0.2.0/README.md`
 - Maintenance and security response: `CONTRIBUTING.md` / `SECURITY.md`

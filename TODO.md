@@ -249,27 +249,27 @@
 - [x] 补齐 `scripts/reference_compare.py` 对 P22 新增 portable graph op（`asinh/acosh/atanh/hypot`）的 NumPy / Torch 对照支持
 - [x] 增加 portable graph 到外部参考脚本的端到端回归测试，避免导出 schema 与脚本支持面漂移
 - [x] 为 portable graph JSON 增加轻量 schema validator，覆盖必需字段、节点 id、root、输入索引与 op 支持面
-- [ ] 评估 CLI 是否需要 `eml export portable` 子命令，降低外部工具消费门槛
+- [x] 评估 CLI 是否需要 `eml export portable` 子命令，降低外部工具消费门槛（结论：需要；已实现 `eml export portable <expr> [--kind source|eml]`）
 
 ## P27: 文档与门禁一致性
 
 - [x] 修正 bytecode batch 自动并行阈值 rustdoc，将 `min_samples_per_worker` 与实际默认值 `256` 对齐
 - [x] 修正文档中“每次 PR 跑 benchmark”的过期表述，明确性能 gate 由 nightly / `workflow_dispatch` 的 `bench-only` 路径执行
-- [ ] 决策：是否增加一个 PR 级轻量 smoke benchmark，还是继续只在 nightly / 手动 workflow 中阻断性能回退
+- [x] 决策：是否增加一个 PR 级轻量 smoke benchmark，还是继续只在 nightly / 手动 workflow 中阻断性能回退（结论：暂不新增 PR 级 smoke benchmark，继续由 nightly / 手动 `bench-only` 阻断）
 
 ## P28: `v0.2.0` 发布候选收口
 
-- [ ] 执行 `docs/releases/v0.2.0/verification.md` 全套 release 前检查
-- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定
-- [ ] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
-- [ ] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
+- [x] 执行 `docs/releases/v0.2.0/verification.md` 本地 release 前检查（远端 release/tag 检查仍随最终发布执行）
+- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证 run `25716323482` 可下载；v2 schema 多轮远端稳定性需在本次变更合入后继续核验）
+- [x] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
+- [x] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
 - [ ] 创建并验证 `v0.2.0` tag / GitHub Release / release assets
 
 ## P29: API 收敛
 
-- [ ] 梳理 Stable API 是否足以覆盖 README 推荐工作流，减少用户直接依赖实验模块的必要性
-- [ ] 为 portable graph 与 CLI 导出入口补稳定性说明和迁移策略
-- [ ] 复审 `compile_expression()` 的弃用周期，决定在 `0.2.x` 保留还是计划后续移除
+- [x] 梳理 Stable API 是否足以覆盖 README 推荐工作流，减少用户直接依赖实验模块的必要性
+- [x] 为 portable graph 与 CLI 导出入口补稳定性说明和迁移策略
+- [x] 复审 `compile_expression()` 的弃用周期，决定在 `0.2.x` 保留还是计划后续移除（结论：`0.2.x` 保留，最早 `0.3.0` 或之后移除）
 
 ## P30: 研究增强与长期治理
 

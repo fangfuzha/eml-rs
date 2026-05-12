@@ -43,6 +43,7 @@
 ### 性能回归
 
 - 主 CI 跑格式、clippy、测试、覆盖率、兼容性与供应链检查；性能门禁由 nightly / `workflow_dispatch` 的 `bench-only` 路径运行。
+- P27 决策：暂不新增 PR 级 smoke benchmark。当前 Criterion 子集仍会增加 PR 时长且容易受共享 runner 抖动影响，运行时性能回退继续由 nightly 与手动 `bench-only` 阻断；待多轮 artifact 历史稳定后再复审是否提升到 PR 级信号。
 - `bench-only` 运行 `cargo bench --bench eval_bench`，并用 `scripts/bench_gate.py` 对比门槛。
 - 基准覆盖包含 `softmax_ce_*_batch32/256/1024/4096` 与 `lower_verify_1k/10k/100k_nodes`
 - 重点门禁仍聚焦：`shared_eml_*`、`softmax_ce_*_batch1024`、`lower_verify_10k_nodes`
@@ -108,6 +109,7 @@
 ### Performance Regression
 
 - Main CI runs formatting, clippy, tests, coverage, compatibility, and supply-chain checks; performance gates run through nightly / `workflow_dispatch` `bench-only`.
+- P27 decision: do not add a PR-level smoke benchmark yet. A Criterion subset would still add PR latency and remain noisy on shared runners, so runtime regressions continue to block through nightly and manual `bench-only`; revisit PR-level signaling after more artifact history is stable.
 - `bench-only` runs `cargo bench --bench eval_bench` and enforces thresholds with `scripts/bench_gate.py`.
 - Coverage includes `softmax_ce_*_batch32/256/1024/4096` and `lower_verify_1k/10k/100k_nodes`
 - Primary blocking workloads remain: `shared_eml_*`, `softmax_ce_*_batch1024`, `lower_verify_10k_nodes`

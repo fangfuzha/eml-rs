@@ -8,18 +8,35 @@ use eml_rs::lowering::{
     eval_source_expr_complex, lower_to_eml, parse_source_expr, source_expr_node_count, SourceExpr,
 };
 use eml_rs::opt::optimize_for_lowering;
+use eml_rs::portable::{
+    expr_to_portable_json, source_expr_to_portable_json, validate_portable_json,
+};
 use eml_rs::verify::VerifyParallelism;
 use num_complex::Complex64;
 
 fn usage() -> &'static str {
-    "用法:
-  eml parse <expr>
-  eml lower <expr>
-    eml verify <expr> --samples <samples.json> [--tolerance <f64>] [--relaxed] [--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] [--bytecode-min-samples-per-worker <usize>]
-    eml profile <expr> [--samples <samples.json>] [--sample-count <usize>] [--relaxed] [--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] [--bytecode-min-samples-per-worker <usize>]
+    concat!(
+        "用法:\n",
+        "  eml parse <expr>\n",
+        "  eml lower <expr>\n",
+        "  eml export portable <expr> [--kind <source|eml>]\n",
+        "  eml verify <expr> --samples <samples.json> [--tolerance <f64>] [--relaxed] ",
+        "[--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] ",
+        "[--bytecode-min-samples-per-worker <usize>]\n",
+        "  eml profile <expr> [--samples <samples.json>] [--sample-count <usize>] ",
+        "[--relaxed] [--bytecode-parallel <off|auto|force>] [--bytecode-workers <usize>] ",
+        "[--bytecode-min-samples-per-worker <usize>]\n",
+        "\n",
+        "样本 JSON 格式: [[0.2, 1.4], [0.5, 2.0]]\n",
+        "表达式如果包含空格，请用引号包住。",
+    )
+}
 
-样本 JSON 格式: [[0.2, 1.4], [0.5, 2.0]]
-表达式如果包含空格，请用引号包住。"
+/// Portable graph 的 CLI 导出目标。
+#[derive(Clone, Copy)]
+enum PortableExportKind {
+    Source,
+    Eml,
 }
 
 fn arg_value(args: &[String], flag: &str) -> Option<String> {
@@ -30,6 +47,13 @@ fn arg_value(args: &[String], flag: &str) -> Option<String> {
 
 fn required_expr(args: &[String]) -> Result<&str, String> {
     args.get(2)
+        .map(String::as_str)
+        .ok_or_else(|| "missing expression argument".to_string())
+}
+
+/// 读取 `eml export portable` 的表达式参数。
+fn required_export_expr(args: &[String]) -> Result<&str, String> {
+    args.get(3)
         .map(String::as_str)
         .ok_or_else(|| "missing expression argument".to_string())
 }
@@ -93,6 +117,18 @@ fn parse_bytecode_batch_parallelism(args: &[String]) -> Result<BytecodeBatchPara
         })),
         other => Err(format!(
             "invalid --bytecode-parallel value '{other}', expected off|auto|force"
+        )),
+    }
+}
+
+/// 解析 portable graph 导出的目标图类型。
+fn parse_portable_export_kind(args: &[String]) -> Result<PortableExportKind, String> {
+    let kind = arg_value(args, "--kind").unwrap_or_else(|| "source".to_string());
+    match kind.as_str() {
+        "source" | "source_expr" => Ok(PortableExportKind::Source),
+        "eml" | "eml_expr" => Ok(PortableExportKind::Eml),
+        other => Err(format!(
+            "invalid --kind value '{other}', expected source|eml"
         )),
     }
 }
@@ -205,6 +241,33 @@ fn cmd_lower(args: &[String]) -> Result<(), String> {
         source_expr_node_count(&optimized)
     );
     Ok(())
+}
+
+/// 将源表达式导出为 portable graph JSON。
+fn cmd_export_portable(args: &[String]) -> Result<(), String> {
+    let source = parse_source_expr(required_export_expr(args)?).map_err(|err| err.to_string())?;
+    let json = match parse_portable_export_kind(args)? {
+        PortableExportKind::Source => {
+            source_expr_to_portable_json(&source).map_err(|err| err.to_string())?
+        }
+        PortableExportKind::Eml => {
+            let optimized = optimize_for_lowering(&source);
+            let expr = lower_to_eml(&optimized).map_err(|err| err.to_string())?;
+            expr_to_portable_json(&expr).map_err(|err| err.to_string())?
+        }
+    };
+    validate_portable_json(&json).map_err(|err| format!("generated invalid graph: {err}"))?;
+    println!("{json}");
+    Ok(())
+}
+
+/// 分发 `eml export` 子命令。
+fn cmd_export(args: &[String]) -> Result<(), String> {
+    match args.get(2).map(String::as_str) {
+        Some("portable") => cmd_export_portable(args),
+        Some(other) => Err(format!("unknown export target: {other}\n{}", usage())),
+        None => Err(format!("missing export target\n{}", usage())),
+    }
 }
 
 fn cmd_verify(args: &[String]) -> Result<(), String> {
@@ -347,6 +410,7 @@ fn run(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("parse") => cmd_parse(args),
         Some("lower") => cmd_lower(args),
+        Some("export") => cmd_export(args),
         Some("verify") => cmd_verify(args),
         Some("profile") => cmd_profile(args),
         Some("-h" | "--help") | None => {

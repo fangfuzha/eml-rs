@@ -20,7 +20,7 @@
 - 文档索引 / Docs index: `docs/README.md`
 - 论文摘要与工程指导: `docs/eml-paper-summary.md`
 - 论文基集目录 / Paper-basis catalog: `docs/paper-basis-catalog.md`
-- 论文复现 release 草案 / Paper-reproduction release draft: `docs/releases/v0.2.0/README.md`
+- 论文复现 release 快照 / Paper-reproduction release snapshot: `docs/releases/v0.2.0/README.md`
 - 范围声明 / Scope: `docs/scope.md`
 - 验收标准 / Acceptance: `docs/acceptance.md`
 - 架构设计 / Architecture: `docs/architecture.md`

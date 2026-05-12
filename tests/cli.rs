@@ -33,6 +33,39 @@ fn cli_parse_and_lower_commands_run() {
 }
 
 #[test]
+fn cli_export_portable_command_runs() {
+    let source_export = Command::new(eml_bin())
+        .args(["export", "portable", "hypot(x0, x1)"])
+        .output()
+        .unwrap();
+    assert!(
+        source_export.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&source_export.stderr)
+    );
+    let source: serde_json::Value = serde_json::from_slice(&source_export.stdout).unwrap();
+    assert_eq!(source["schema"], "eml-rs.portable-graph.v1");
+    assert_eq!(source["graph_kind"], "source_expr");
+
+    let eml_export = Command::new(eml_bin())
+        .args(["export", "portable", "exp(x0) - log(x1)", "--kind", "eml"])
+        .output()
+        .unwrap();
+    assert!(
+        eml_export.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&eml_export.stderr)
+    );
+    let eml: serde_json::Value = serde_json::from_slice(&eml_export.stdout).unwrap();
+    assert_eq!(eml["graph_kind"], "eml_expr");
+    assert!(eml["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|node| node["op"] == "eml"));
+}
+
+#[test]
 fn cli_verify_and_profile_commands_run() {
     let sample_path = std::env::temp_dir().join("eml-cli-samples.json");
     fs::write(&sample_path, "[[0.2, 1.4], [0.5, 2.0]]").unwrap();
