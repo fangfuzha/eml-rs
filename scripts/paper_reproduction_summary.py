@@ -151,20 +151,26 @@ def build_summary(catalog_path: pathlib.Path) -> Dict[str, Any]:
   replayed = build_replayed_witnesses(catalog)
   counts = status_counts(catalog)
   covered_ratio = coverage_ratio(counts)
-  all_replayed_covered = all(item["catalog_status"] == "covered"
-                             and item["catalog_has_witness"]
-                             for item in replayed)
+  all_replayed_covered = all(
+      item["catalog_status"] == "covered" and item["catalog_has_witness"]
+      for item in replayed)
   no_missing_replayed = all(
       item["catalog_status"] not in {"missing", "missing-entry", "unknown"}
       and item["catalog_has_witness"] for item in replayed)
 
   return {
-      "schema": SUMMARY_SCHEMA,
-      "schema_version": SUMMARY_SCHEMA_VERSION,
-      "generated_at": datetime.now(timezone.utc).isoformat(),
-      "catalog": str(catalog_path),
-      "catalog_schema": catalog.get("schema"),
-      "ci_mode": "non-blocking-artifact-first",
+      "schema":
+      SUMMARY_SCHEMA,
+      "schema_version":
+      SUMMARY_SCHEMA_VERSION,
+      "generated_at":
+      datetime.now(timezone.utc).isoformat(),
+      "catalog":
+      str(catalog_path),
+      "catalog_schema":
+      catalog.get("schema"),
+      "ci_mode":
+      "non-blocking-artifact-first",
       "harness": {
           "rust_test": "tests/paper_reproduction.rs",
           "test_command": "cargo test --test paper_reproduction",
@@ -172,12 +178,16 @@ def build_summary(catalog_path: pathlib.Path) -> Dict[str, Any]:
           "pure_eml_witness vs lowering_result vs source_reference",
           "sample_regions": SAMPLE_REGIONS,
       },
-      "catalog_status_counts": counts,
-      "catalog_coverage_ratio": covered_ratio,
-      "missing_or_partial_entries": entries_with_status(catalog,
-                                                         {"missing", "partial"}),
-      "witness_provenance_summary": witness_provenance_summary(catalog),
-      "replayed_witnesses": replayed,
+      "catalog_status_counts":
+      counts,
+      "catalog_coverage_ratio":
+      covered_ratio,
+      "missing_or_partial_entries":
+      entries_with_status(catalog, {"missing", "partial"}),
+      "witness_provenance_summary":
+      witness_provenance_summary(catalog),
+      "replayed_witnesses":
+      replayed,
       "acceptance": {
           "all_replayed_witnesses_are_catalog_covered": all_replayed_covered,
           "no_missing_replayed_witnesses": no_missing_replayed,
@@ -216,8 +226,8 @@ def render_markdown(summary: Dict[str, Any]) -> str:
   ])
   for witness in summary["replayed_witnesses"]:
     lines.append(
-        "| `{name}` | `{source}` | `{witness}` | `{status}` | `{provenance}` |".
-        format(
+        "| `{name}` | `{source}` | `{witness}` | `{status}` | `{provenance}` |"
+        .format(
             name=witness["name"],
             source=witness["source_formula"],
             witness=witness["witness_formula"],
@@ -296,7 +306,8 @@ def main() -> int:
       failures.append("not all replayed witnesses are catalog covered")
   if args.require_no_missing_replayed:
     if not summary["acceptance"]["no_missing_replayed_witnesses"]:
-      failures.append("some replayed witnesses are missing or lack witness metadata")
+      failures.append(
+          "some replayed witnesses are missing or lack witness metadata")
   if args.require_min_covered_ratio is not None:
     actual = summary["acceptance"]["catalog_covered_ratio"]
     if actual < args.require_min_covered_ratio:

@@ -244,12 +244,19 @@
 - [x] 更新 README / user-guide / developer-guide 中的 `paper-basis` 入口，确保使用者能从首页找到复现资产
 - [x] 在发布说明中明确 `repo-extension` 训练模板仍是工程扩展，不作为论文 Table 1 完备性声明的一部分
 
-## 后续执行顺序（P22+）
+## 后续执行顺序（P22+，已核验）
 
-- [ ] 先完成 P22 的 paper-basis 缺口补齐，再考虑 P23 的 gate 升级
-- [ ] P23 只升级稳定、低波动、可解释的检查；SR recovery rate 继续保留为非阻断研究指标
-- [ ] P24 的 SR 增强不得影响主 CI 时长和 runtime 性能门禁
-- [ ] P25 发布准备必须以 P22/P23 的实际完成状态为准，不为了版本目标隐瞒 `missing` / `partial` 缺口
+- [x] 先完成 P22 的 paper-basis 缺口补齐，再考虑 P23 的 gate 升级
+- [x] P23 只升级稳定、低波动、可解释的检查；SR recovery rate 继续保留为非阻断研究指标
+- [x] P24 的 SR 增强不得影响主 CI 时长和 runtime 性能门禁
+- [x] P25 发布准备必须以 P22/P23 的实际完成状态为准，不为了版本目标隐瞒 `missing` / `partial` 缺口
+
+核验依据：
+
+- P22：`docs/paper-basis-catalog.json` 当前 `covered=36, missing=0, partial=0`；P22 新增项已纳入 `tests/paper_reproduction.rs` replay。
+- P23：严格 gate 参数已在 `scripts/paper_reproduction_summary.py` 与 `nightly.yml` 的手动 `workflow_dispatch` 路径中保留，默认 nightly 仍为非阻断 artifact。
+- P24：SR 研究 benchmark 产出 schema v2 JSON/Markdown，位于 nightly / workflow_dispatch 的独立非阻断 job，不进入 runtime 性能 gate。
+- P25：`docs/releases/v0.2.0/` 已记录范围、非目标、release 前检查与 `repo-extension` 边界。
 
 ## 后续执行顺序（冻结）
 

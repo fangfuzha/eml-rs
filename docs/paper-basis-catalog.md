@@ -42,41 +42,41 @@
 
 ## 2. 一元函数
 
-| 条目               | 论文基集 | 当前状态  | 测试锚点                                                                                                                                     | 备注                                                      |
-| ------------------ | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `minus(x)`         | 是       | `covered` | 间接覆盖                                                                                                                                     | 对应 `Neg`                                                |
-| `half(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Div(x, 2)`                         |
-| `inv(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Div(1, x)`                         |
-| `sqr(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                       | 命名 parser 入口展开为 `Pow(x, 2)`                         |
-| `sqrt(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Sqrt`                                               |
-| `exp(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_exp_matches_complex_exp`                                           | 对应 `Exp`                                                |
-| `log(x)` / `ln(x)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_log_formula_matches_real_ln`                                       | 对应 `Log`                                                |
-| `sin(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference`                              | 对应 `Sin`                                                |
-| `cos(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference`                              | 对应 `Cos`                                                |
-| `tan(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Tan`                                                |
-| `sinh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Sinh`                                               |
-| `cosh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Cosh`                                               |
-| `tanh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Tanh`                                               |
-| `asin(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Asin`                                               |
-| `acos(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Acos`                                               |
-| `atan(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Atan`                                               |
-| `asinh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Asinh`                                             |
-| `acosh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Acosh`                                             |
-| `atanh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                    | 对应 `Atanh`                                             |
-| `sigmoid(x)`       | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable` | 论文基集成员，同时也服务训练模板                          |
+| 条目               | 论文基集 | 当前状态  | 测试锚点                                                                                                                                     | 备注                               |
+| ------------------ | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `minus(x)`         | 是       | `covered` | 间接覆盖                                                                                                                                     | 对应 `Neg`                         |
+| `half(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                         | 命名 parser 入口展开为 `Div(x, 2)` |
+| `inv(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                         | 命名 parser 入口展开为 `Div(1, x)` |
+| `sqr(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`                         | 命名 parser 入口展开为 `Pow(x, 2)` |
+| `sqrt(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Sqrt`                        |
+| `exp(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_exp_matches_complex_exp`                                           | 对应 `Exp`                         |
+| `log(x)` / `ln(x)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_eml_log_formula_matches_real_ln`                                       | 对应 `Log`                         |
+| `sin(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference`                              | 对应 `Sin`                         |
+| `cos(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference`                              | 对应 `Cos`                         |
+| `tan(x)`           | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Tan`                         |
+| `sinh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Sinh`                        |
+| `cosh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Cosh`                        |
+| `tanh(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Tanh`                        |
+| `asin(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Asin`                        |
+| `acos(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Acos`                        |
+| `atan(x)`          | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_extended_elementary_functions_match_reference`                         | 对应 `Atan`                        |
+| `asinh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                      | 对应 `Asinh`                       |
+| `acosh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                      | 对应 `Acosh`                       |
+| `atanh(x)`         | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference`                      | 对应 `Atanh`                       |
+| `sigmoid(x)`       | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_sigmoid_and_repo_extension_training_family_is_lowerable_and_evaluable` | 论文基集成员，同时也服务训练模板   |
 
 ## 3. 二元操作
 
-| 条目          | 论文基集 | 当前状态  | 测试锚点                                                                                                        | 备注                                               |
-| ------------- | -------- | --------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `x + y`       | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference` | 对应 `Add`                                         |
-| `x - y`       | 是       | `covered` | 间接覆盖                                                                                                        | 对应 `Sub`                                         |
-| `x * y`       | 是       | `covered` | 间接覆盖                                                                                                        | 对应 `Mul`                                         |
-| `x / y`       | 是       | `covered` | 间接覆盖                                                                                                        | 对应 `Div`                                         |
-| `pow(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `bytecode_and_tree_evaluation_agree`                   | 对应 `Pow`；当前测试名仍偏 backend 一致性视角      |
-| `log_x(y)`    | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference` | 命名 parser 入口展开为 `log(y) / log(x)`          |
-| `avg(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference` | 命名 parser 入口展开为 `(x + y) / 2`              |
-| `hypot(x, y)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference` | 对应 `Hypot`                                      |
+| 条目          | 论文基集 | 当前状态  | 测试锚点                                                                                                                | 备注                                          |
+| ------------- | -------- | --------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `x + y`       | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_source_lowering_matches_native_reference`         | 对应 `Add`                                    |
+| `x - y`       | 是       | `covered` | 间接覆盖                                                                                                                | 对应 `Sub`                                    |
+| `x * y`       | 是       | `covered` | 间接覆盖                                                                                                                | 对应 `Mul`                                    |
+| `x / y`       | 是       | `covered` | 间接覆盖                                                                                                                | 对应 `Div`                                    |
+| `pow(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `bytecode_and_tree_evaluation_agree`                           | 对应 `Pow`；当前测试名仍偏 backend 一致性视角 |
+| `log_x(y)`    | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`    | 命名 parser 入口展开为 `log(y) / log(x)`      |
+| `avg(x, y)`   | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_named_composition_entries_match_reference`    | 命名 parser 入口展开为 `(x + y) / 2`          |
+| `hypot(x, y)` | 是       | `covered` | [tests/reference_compare.rs](tests/reference_compare.rs) `paper_basis_p22_inverse_hyperbolic_and_hypot_match_reference` | 对应 `Hypot`                                  |
 
 ## 4. 仓库扩展模板（非论文原始基集）
 
@@ -129,34 +129,34 @@
 
 除非特别说明，下表中的组合见证式表示“当前仓库采用的可执行 witness”，不等于论文 Table 4 的最短式。
 
-| 能力         | 见证式                           | 来源                                                                          | 置信度   | 备注                                            |
-| ------------ | -------------------------------- | ----------------------------------------------------------------------------- | -------- | ----------------------------------------------- |
-| `exp(x)`     | `eml(x, 1)`                      | 论文正文显式给出；仓库 `eml_exp` 直接采用                                     | 明确找到 | 论文最基础显式 witness                          |
-| `ln(x)`      | `eml(1, eml(eml(1, x), 1))`      | 论文正文显式给出；论文还给出 RPN `11xE1EE`；仓库 `eml_log` 直接采用           | 明确找到 | 当前最关键的 paper-basis 锚点                   |
-| `e`          | `eml(1, 1)`                      | 论文正文与结果段落明确给出；仓库以 `eml_exp(1)` 生成                          | 明确找到 | 常量 witness                                    |
-| `-x`         | `(1 - x) - 1`                    | 仓库 `eml_neg` 显式实现                                                       | 明确找到 | 当前 lowering witness；不主张最短               |
-| `x - y`      | `eml(ln(x), exp(y))`             | 由 `eml(x, y) = exp(x) - ln(y)` 直接改写；仓库 `eml_sub` 显式实现             | 明确找到 | 这是最直接的减法 witness 之一                   |
-| `x + y`      | `x - (-y)`                       | 仓库 `eml_add` 显式实现                                                       | 明确找到 | 当前 lowering witness；通过 `sub` 与 `neg` 组合 |
-| `half(x)`    | `x / 2`                          | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
-| `1 / x`      | `exp(-ln(x))`                    | 仓库 `eml_inv` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
-| `sqr(x)`     | `x * x`                          | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
-| `x * y`      | `exp(ln(x) + ln(y))`             | 论文引言复述 exp-log 经典恒等式；仓库 `eml_mul` 显式实现                      | 明确找到 | 当前 lowering witness；不主张最短               |
-| `x / y`      | `x * (1 / y)`                    | 仓库 `eml_div` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
-| `x ^ y`      | `exp(y * ln(x))`                 | 论文把 `pow` 列入基集；仓库 `eml_pow` 显式实现                                | 明确找到 | 当前 lowering witness；基于经典恒等式           |
-| `sqrt(x)`    | `x ^ (1/2)`                      | 仓库 `eml_sqrt` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
-| `sin(x)`     | `(exp(i x) - exp(-i x)) / (2 i)` | 仓库 `eml_sin` 显式实现；论文引言以 Euler 公式说明三角函数可归入 exp-log 视角 | 明确找到 | 当前 lowering witness；不主张最短               |
-| `cos(x)`     | `(exp(i x) + exp(-i x)) / 2`     | 仓库 `eml_cos` 显式实现                                                       | 明确找到 | 当前 lowering witness；不主张最短               |
-| `tan(x)`     | `sin(x) / cos(x)`                | 仓库 `eml_tan` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
-| `sinh(x)`    | `(exp(x) - exp(-x)) / 2`         | 仓库 `eml_sinh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
-| `cosh(x)`    | `(exp(x) + exp(-x)) / 2`         | 仓库 `eml_cosh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
-| `tanh(x)`    | `sinh(x) / cosh(x)`              | 仓库 `eml_tanh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
-| `asinh(x)`   | `log(x + sqrt(x^2 + 1))`         | 仓库 `eml_asinh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
-| `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | 仓库 `eml_acosh` 显式实现                                                  | 明确找到 | 当前 lowering witness                           |
-| `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | 仓库 `eml_atanh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
-| `hypot(x, y)` | `sqrt(x^2 + y^2)`               | 仓库 `eml_hypot` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
-| `log_x(y)`   | `log(y) / log(x)`                | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
-| `avg(x, y)`  | `(x + y) / 2`                    | 仓库命名 parser 入口展开                                                       | 明确找到 | 组合入口，不新增 AST 变体                       |
-| `sigmoid(x)` | `1 / (1 + exp(-x))`              | 论文方法段明确把 logistic sigmoid 列为基集成员；仓库 `eml_sigmoid` 显式实现   | 明确找到 | 兼具 paper-basis 与训练模板双重意义             |
+| 能力          | 见证式                               | 来源                                                                          | 置信度   | 备注                                            |
+| ------------- | ------------------------------------ | ----------------------------------------------------------------------------- | -------- | ----------------------------------------------- |
+| `exp(x)`      | `eml(x, 1)`                          | 论文正文显式给出；仓库 `eml_exp` 直接采用                                     | 明确找到 | 论文最基础显式 witness                          |
+| `ln(x)`       | `eml(1, eml(eml(1, x), 1))`          | 论文正文显式给出；论文还给出 RPN `11xE1EE`；仓库 `eml_log` 直接采用           | 明确找到 | 当前最关键的 paper-basis 锚点                   |
+| `e`           | `eml(1, 1)`                          | 论文正文与结果段落明确给出；仓库以 `eml_exp(1)` 生成                          | 明确找到 | 常量 witness                                    |
+| `-x`          | `(1 - x) - 1`                        | 仓库 `eml_neg` 显式实现                                                       | 明确找到 | 当前 lowering witness；不主张最短               |
+| `x - y`       | `eml(ln(x), exp(y))`                 | 由 `eml(x, y) = exp(x) - ln(y)` 直接改写；仓库 `eml_sub` 显式实现             | 明确找到 | 这是最直接的减法 witness 之一                   |
+| `x + y`       | `x - (-y)`                           | 仓库 `eml_add` 显式实现                                                       | 明确找到 | 当前 lowering witness；通过 `sub` 与 `neg` 组合 |
+| `half(x)`     | `x / 2`                              | 仓库命名 parser 入口展开                                                      | 明确找到 | 组合入口，不新增 AST 变体                       |
+| `1 / x`       | `exp(-ln(x))`                        | 仓库 `eml_inv` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
+| `sqr(x)`      | `x * x`                              | 仓库命名 parser 入口展开                                                      | 明确找到 | 组合入口，不新增 AST 变体                       |
+| `x * y`       | `exp(ln(x) + ln(y))`                 | 论文引言复述 exp-log 经典恒等式；仓库 `eml_mul` 显式实现                      | 明确找到 | 当前 lowering witness；不主张最短               |
+| `x / y`       | `x * (1 / y)`                        | 仓库 `eml_div` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
+| `x ^ y`       | `exp(y * ln(x))`                     | 论文把 `pow` 列入基集；仓库 `eml_pow` 显式实现                                | 明确找到 | 当前 lowering witness；基于经典恒等式           |
+| `sqrt(x)`     | `x ^ (1/2)`                          | 仓库 `eml_sqrt` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
+| `sin(x)`      | `(exp(i x) - exp(-i x)) / (2 i)`     | 仓库 `eml_sin` 显式实现；论文引言以 Euler 公式说明三角函数可归入 exp-log 视角 | 明确找到 | 当前 lowering witness；不主张最短               |
+| `cos(x)`      | `(exp(i x) + exp(-i x)) / 2`         | 仓库 `eml_cos` 显式实现                                                       | 明确找到 | 当前 lowering witness；不主张最短               |
+| `tan(x)`      | `sin(x) / cos(x)`                    | 仓库 `eml_tan` 显式实现                                                       | 明确找到 | 当前 lowering witness                           |
+| `sinh(x)`     | `(exp(x) - exp(-x)) / 2`             | 仓库 `eml_sinh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
+| `cosh(x)`     | `(exp(x) + exp(-x)) / 2`             | 仓库 `eml_cosh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
+| `tanh(x)`     | `sinh(x) / cosh(x)`                  | 仓库 `eml_tanh` 显式实现                                                      | 明确找到 | 当前 lowering witness                           |
+| `asinh(x)`    | `log(x + sqrt(x^2 + 1))`             | 仓库 `eml_asinh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `acosh(x)`    | `log(x + sqrt(x - 1) * sqrt(x + 1))` | 仓库 `eml_acosh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `atanh(x)`    | `(log(1 + x) - log(1 - x)) / 2`      | 仓库 `eml_atanh` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `hypot(x, y)` | `sqrt(x^2 + y^2)`                    | 仓库 `eml_hypot` 显式实现                                                     | 明确找到 | 当前 lowering witness                           |
+| `log_x(y)`    | `log(y) / log(x)`                    | 仓库命名 parser 入口展开                                                      | 明确找到 | 组合入口，不新增 AST 变体                       |
+| `avg(x, y)`   | `(x + y) / 2`                        | 仓库命名 parser 入口展开                                                      | 明确找到 | 组合入口，不新增 AST 变体                       |
+| `sigmoid(x)`  | `1 / (1 + exp(-x))`                  | 论文方法段明确把 logistic sigmoid 列为基集成员；仓库 `eml_sigmoid` 显式实现   | 明确找到 | 兼具 paper-basis 与训练模板双重意义             |
 
 ### 当前无法在公开来源中直接抄录显式 witness 的条目
 
@@ -200,34 +200,34 @@ This first witness set records auditable formulas using three source tiers:
 2. formulas implemented explicitly in the current lowering helpers
 3. formulas whose existence is confirmed by the paper, while the repository records an executable compositional witness without claiming shortest-known status
 
-| Capability   | Witness                          | Source                                                                                | Confidence | Note                                     |
-| ------------ | -------------------------------- | ------------------------------------------------------------------------------------- | ---------- | ---------------------------------------- |
-| `exp(x)`     | `eml(x, 1)`                      | explicit in paper; directly used by `eml_exp`                                         | explicit   | canonical paper witness                  |
-| `ln(x)`      | `eml(1, eml(eml(1, x), 1))`      | explicit in paper; paper also gives RPN `11xE1EE`; directly used by `eml_log`         | explicit   | primary paper-basis anchor               |
-| `e`          | `eml(1, 1)`                      | explicit in paper/results; repository derives it via `eml_exp(1)`                     | explicit   | constant witness                         |
-| `-x`         | `(1 - x) - 1`                    | explicit current lowering helper `eml_neg`                                            | explicit   | repository witness, not claimed shortest |
-| `x - y`      | `eml(ln(x), exp(y))`             | direct algebraic rewrite of the EML definition; explicit helper `eml_sub`             | explicit   | direct subtraction witness               |
-| `x + y`      | `x - (-y)`                       | explicit helper `eml_add`                                                             | explicit   | repository witness                       |
-| `half(x)`    | `x / 2`                          | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
-| `1 / x`      | `exp(-ln(x))`                    | explicit helper `eml_inv`                                                             | explicit   | repository witness                       |
-| `sqr(x)`     | `x * x`                          | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
-| `x * y`      | `exp(ln(x) + ln(y))`             | classical exp-log identity echoed in paper introduction; explicit helper `eml_mul`    | explicit   | repository witness, not claimed shortest |
-| `x / y`      | `x * (1 / y)`                    | explicit helper `eml_div`                                                             | explicit   | repository witness                       |
-| `x ^ y`      | `exp(y * ln(x))`                 | `pow` is part of the paper basis; explicit helper `eml_pow`                           | explicit   | repository witness                       |
-| `sqrt(x)`    | `x ^ (1/2)`                      | explicit helper `eml_sqrt`                                                            | explicit   | repository witness                       |
-| `sin(x)`     | `(exp(i x) - exp(-i x)) / (2 i)` | explicit helper `eml_sin`; paper introduction motivates trig via Euler/exp-log        | explicit   | repository witness, not claimed shortest |
-| `cos(x)`     | `(exp(i x) + exp(-i x)) / 2`     | explicit helper `eml_cos`                                                             | explicit   | repository witness                       |
-| `tan(x)`     | `sin(x) / cos(x)`                | explicit helper `eml_tan`                                                             | explicit   | repository witness                       |
-| `sinh(x)`    | `(exp(x) - exp(-x)) / 2`         | explicit helper `eml_sinh`                                                            | explicit   | repository witness                       |
-| `cosh(x)`    | `(exp(x) + exp(-x)) / 2`         | explicit helper `eml_cosh`                                                            | explicit   | repository witness                       |
-| `tanh(x)`    | `sinh(x) / cosh(x)`              | explicit helper `eml_tanh`                                                            | explicit   | repository witness                       |
-| `asinh(x)`   | `log(x + sqrt(x^2 + 1))`         | explicit helper `eml_asinh`                                                            | explicit   | repository witness                       |
-| `acosh(x)`   | `log(x + sqrt(x - 1) * sqrt(x + 1))` | explicit helper `eml_acosh`                                                         | explicit   | repository witness                       |
-| `atanh(x)`   | `(log(1 + x) - log(1 - x)) / 2`  | explicit helper `eml_atanh`                                                            | explicit   | repository witness                       |
-| `hypot(x, y)` | `sqrt(x^2 + y^2)`               | explicit helper `eml_hypot`                                                            | explicit   | repository witness                       |
-| `log_x(y)`   | `log(y) / log(x)`                | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
-| `avg(x, y)`  | `(x + y) / 2`                    | named parser entry                                                                     | explicit   | composition entry, no new AST variant    |
-| `sigmoid(x)` | `1 / (1 + exp(-x))`              | logistic sigmoid is explicitly part of the paper basis; explicit helper `eml_sigmoid` | explicit   | both paper-basis and training-relevant   |
+| Capability    | Witness                              | Source                                                                                | Confidence | Note                                     |
+| ------------- | ------------------------------------ | ------------------------------------------------------------------------------------- | ---------- | ---------------------------------------- |
+| `exp(x)`      | `eml(x, 1)`                          | explicit in paper; directly used by `eml_exp`                                         | explicit   | canonical paper witness                  |
+| `ln(x)`       | `eml(1, eml(eml(1, x), 1))`          | explicit in paper; paper also gives RPN `11xE1EE`; directly used by `eml_log`         | explicit   | primary paper-basis anchor               |
+| `e`           | `eml(1, 1)`                          | explicit in paper/results; repository derives it via `eml_exp(1)`                     | explicit   | constant witness                         |
+| `-x`          | `(1 - x) - 1`                        | explicit current lowering helper `eml_neg`                                            | explicit   | repository witness, not claimed shortest |
+| `x - y`       | `eml(ln(x), exp(y))`                 | direct algebraic rewrite of the EML definition; explicit helper `eml_sub`             | explicit   | direct subtraction witness               |
+| `x + y`       | `x - (-y)`                           | explicit helper `eml_add`                                                             | explicit   | repository witness                       |
+| `half(x)`     | `x / 2`                              | named parser entry                                                                    | explicit   | composition entry, no new AST variant    |
+| `1 / x`       | `exp(-ln(x))`                        | explicit helper `eml_inv`                                                             | explicit   | repository witness                       |
+| `sqr(x)`      | `x * x`                              | named parser entry                                                                    | explicit   | composition entry, no new AST variant    |
+| `x * y`       | `exp(ln(x) + ln(y))`                 | classical exp-log identity echoed in paper introduction; explicit helper `eml_mul`    | explicit   | repository witness, not claimed shortest |
+| `x / y`       | `x * (1 / y)`                        | explicit helper `eml_div`                                                             | explicit   | repository witness                       |
+| `x ^ y`       | `exp(y * ln(x))`                     | `pow` is part of the paper basis; explicit helper `eml_pow`                           | explicit   | repository witness                       |
+| `sqrt(x)`     | `x ^ (1/2)`                          | explicit helper `eml_sqrt`                                                            | explicit   | repository witness                       |
+| `sin(x)`      | `(exp(i x) - exp(-i x)) / (2 i)`     | explicit helper `eml_sin`; paper introduction motivates trig via Euler/exp-log        | explicit   | repository witness, not claimed shortest |
+| `cos(x)`      | `(exp(i x) + exp(-i x)) / 2`         | explicit helper `eml_cos`                                                             | explicit   | repository witness                       |
+| `tan(x)`      | `sin(x) / cos(x)`                    | explicit helper `eml_tan`                                                             | explicit   | repository witness                       |
+| `sinh(x)`     | `(exp(x) - exp(-x)) / 2`             | explicit helper `eml_sinh`                                                            | explicit   | repository witness                       |
+| `cosh(x)`     | `(exp(x) + exp(-x)) / 2`             | explicit helper `eml_cosh`                                                            | explicit   | repository witness                       |
+| `tanh(x)`     | `sinh(x) / cosh(x)`                  | explicit helper `eml_tanh`                                                            | explicit   | repository witness                       |
+| `asinh(x)`    | `log(x + sqrt(x^2 + 1))`             | explicit helper `eml_asinh`                                                           | explicit   | repository witness                       |
+| `acosh(x)`    | `log(x + sqrt(x - 1) * sqrt(x + 1))` | explicit helper `eml_acosh`                                                           | explicit   | repository witness                       |
+| `atanh(x)`    | `(log(1 + x) - log(1 - x)) / 2`      | explicit helper `eml_atanh`                                                           | explicit   | repository witness                       |
+| `hypot(x, y)` | `sqrt(x^2 + y^2)`                    | explicit helper `eml_hypot`                                                           | explicit   | repository witness                       |
+| `log_x(y)`    | `log(y) / log(x)`                    | named parser entry                                                                    | explicit   | composition entry, no new AST variant    |
+| `avg(x, y)`   | `(x + y) / 2`                        | named parser entry                                                                    | explicit   | composition entry, no new AST variant    |
+| `sigmoid(x)`  | `1 / (1 + exp(-x))`                  | logistic sigmoid is explicitly part of the paper basis; explicit helper `eml_sigmoid` | explicit   | both paper-basis and training-relevant   |
 
 ### Items whose explicit public witnesses are still not transcribed here
 

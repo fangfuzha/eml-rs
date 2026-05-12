@@ -20,28 +20,31 @@ println!("{value}");
 
 ### 核心概念
 
-| 名称 | 作用 |
-| --- | --- |
-| `SourceExpr` | 源表达式 AST，适合模板构造、自动微分、源级重写 |
-| `LoweredExpr` | standalone lowering crate 的纯 EML 树 |
-| `Expr` | runtime IR，适合 tree/RPN/bytecode 执行与统计 |
-| `BytecodeProgram` | 对 `Expr` 做 CSE/常量折叠后的寄存器程序 |
-| `EvalPolicy` | 复对数分支策略、特殊值策略、近实数阈值 |
-| `PipelineBuilder` | 高层开箱即用编译入口 |
+| 名称              | 作用                                           |
+| ----------------- | ---------------------------------------------- |
+| `SourceExpr`      | 源表达式 AST，适合模板构造、自动微分、源级重写 |
+| `LoweredExpr`     | standalone lowering crate 的纯 EML 树          |
+| `Expr`            | runtime IR，适合 tree/RPN/bytecode 执行与统计  |
+| `BytecodeProgram` | 对 `Expr` 做 CSE/常量折叠后的寄存器程序        |
+| `EvalPolicy`      | 复对数分支策略、特殊值策略、近实数阈值         |
+| `PipelineBuilder` | 高层开箱即用编译入口                           |
 
 ### 推荐工作流
+
 1. 用 `PipelineBuilder` 或 `compile()` 建立实验原型。
 2. 需要控制 lowering 前重写时，直接操作 `SourceExpr`。
 3. 需要研究统一 IR 时，直接操作 `Expr` 与 `BytecodeProgram`。
 4. 需要可信对照时，用 `verify` 模块或 `CompiledPipeline::verify_*`。
 
 ### 论文复现入口
+
 - 查看 `docs/paper-basis-catalog.md` 获取论文基集能力、witness 与覆盖状态；脚本和 gate 以 `docs/paper-basis-catalog.json` 为事实源。
 - 使用 `cargo test --test paper_reproduction` 回放代表性 witness，验证 pure EML / lowering / source reference 三方一致性。
 - 使用 `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` 生成可审阅摘要。
 - 若要了解当前发布准备范围与非目标，直接看 `docs/releases/v0.2.0/README.md` 与 `docs/releases/v0.2.0/release-notes.md`。
 
 ### API 分层
+
 - Stable API：默认选择 `compile()`、`PipelineBuilder`、`CompiledPipeline`、`BuiltinBackend`、`PipelineOptions`、`error::*`、`core::EvalPolicy`。
 - Experimental API：研究时可使用 `ir`、`bytecode`、`lowering`、`opt`、`verify`、`profiling`、`plugin`，但升级前要阅读 release notes。
 - 互操作导出：使用 `portable` 模块把 `SourceExpr` 或 `Expr` 导出为 portable graph JSON。
@@ -50,6 +53,7 @@ println!("{value}");
 `compile_expression()` 是 deprecated 流程示例；新代码应使用 `compile()`。
 
 ### 最佳实践
+
 - 研究阶段优先用高层 API，先把语义与验证走通，再下沉到低层模块。
 - 对训练模板保持“先表达统一、后平台特化”的思路，不要一开始就把 EML 当最终部署格式。
 - 对 `log`、`sqrt`、反三角函数等表达式，显式写清策略和容差。
@@ -86,28 +90,31 @@ println!("{value}");
 
 ### Core Concepts
 
-| Name | Role |
-| --- | --- |
-| `SourceExpr` | Source AST for templates, autodiff, and source rewrites |
-| `LoweredExpr` | Pure EML tree from the standalone lowering crate |
-| `Expr` | Runtime IR for tree/RPN/bytecode execution and stats |
-| `BytecodeProgram` | Register program after CSE and constant folding |
-| `EvalPolicy` | Complex-log branch policy, special-value policy, near-real epsilon |
-| `PipelineBuilder` | High-level compile entry point |
+| Name              | Role                                                               |
+| ----------------- | ------------------------------------------------------------------ |
+| `SourceExpr`      | Source AST for templates, autodiff, and source rewrites            |
+| `LoweredExpr`     | Pure EML tree from the standalone lowering crate                   |
+| `Expr`            | Runtime IR for tree/RPN/bytecode execution and stats               |
+| `BytecodeProgram` | Register program after CSE and constant folding                    |
+| `EvalPolicy`      | Complex-log branch policy, special-value policy, near-real epsilon |
+| `PipelineBuilder` | High-level compile entry point                                     |
 
 ### Recommended Workflow
+
 1. Start with `PipelineBuilder` or `compile()` for fast experiments.
 2. Drop to `SourceExpr` when you need pre-lowering rewrites.
 3. Drop to `Expr` and `BytecodeProgram` when researching unified IR execution.
 4. Use `verify` or `CompiledPipeline::verify_*` for trusted comparisons.
 
 ### Paper-Reproduction Entry Points
+
 - Read `docs/paper-basis-catalog.md` for the paper-basis capability list, witnesses, and coverage status; scripts and future gates use `docs/paper-basis-catalog.json` as the source of truth.
 - Run `cargo test --test paper_reproduction` to replay representative witnesses across pure EML, lowering, and source reference.
 - Run `python scripts/paper_reproduction_summary.py --output-json target/paper-reproduction-summary.json --output-md target/paper-reproduction-summary.md` to generate the auditable summary artifact.
 - For the current release-preparation scope and non-goals, read `docs/releases/v0.2.0/README.md` and `docs/releases/v0.2.0/release-notes.md`.
 
 ### API Tiers
+
 - Stable API: default to `compile()`, `PipelineBuilder`, `CompiledPipeline`, `BuiltinBackend`, `PipelineOptions`, `error::*`, and `core::EvalPolicy`.
 - Experimental API: use `ir`, `bytecode`, `lowering`, `opt`, `verify`, `profiling`, and `plugin` for research, but read release notes before upgrading.
 - Interop export: use the `portable` module to export `SourceExpr` or `Expr` into portable graph JSON.
@@ -116,6 +123,7 @@ println!("{value}");
 `compile_expression()` is a deprecation workflow example. New code should use `compile()`.
 
 ### Best Practices
+
 - Prefer the high-level API first, then drop into low-level modules only where the experiment needs it.
 - Keep training templates in a "unify first, specialize later" mindset; EML is not automatically the final deployment format.
 - Make policies and tolerances explicit for `log`, `sqrt`, and inverse trig expressions.

@@ -215,7 +215,7 @@ cargo build --release
 
 ## 9. 后续方向
 
-- 扩展更多训练模板（label smoothing/focal loss 已完成，后续补 label-distribution 与多任务损失拼接）
-- 自动微分进一步工程化（公共子式共享、梯度表达 CSE、Jacobian/Hessian）
-- 反降级器与平台后端对接（直接映射到目标框架算子图）
-- 建立 CI 性能回归基线与多平台数值基线
+- 收集多轮 nightly artifact，观察 paper reproduction 与 SR research 输出是否稳定。
+- 准备正式 `v0.2.0` 前，按 `docs/releases/v0.2.0/verification.md` 运行 release 检查清单。
+- 若继续贴近论文发现流程，优先补“最短式 / 搜索 provenance”治理。
+- 若继续推进工程集成，优先完善反降级后端与平台互操作。

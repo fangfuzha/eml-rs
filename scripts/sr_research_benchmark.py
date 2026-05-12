@@ -188,13 +188,12 @@ def finite_diff_grad(task_name: str, params: Dict[str, float],
 
 
 def snapping_state_for_run(final_loss: float, param_error: float,
-                           max_error: float,
-                           final_bad_samples: int) -> str:
+                           max_error: float, final_bad_samples: int) -> str:
   """Classify one run using the repository's snapping governance rules."""
   if final_bad_samples > 0:
     return "unstable"
-  numerically_equivalent = (final_loss <= RECOVERY_LOSS_THRESHOLD and
-                            max_error <= NUMERICAL_EQUIVALENCE_MAX_ABS_ERROR)
+  numerically_equivalent = (final_loss <= RECOVERY_LOSS_THRESHOLD and max_error
+                            <= NUMERICAL_EQUIVALENCE_MAX_ABS_ERROR)
   parameter_close = param_error <= SNAP_PARAM_RMSE_THRESHOLD
   if parameter_close and numerically_equivalent:
     return "symbolic-equivalent"
@@ -331,20 +330,20 @@ def failure_summary(results: List[Dict[str, Any]]) -> Dict[str, Any]:
       if not item["recovered"] or not item["snapped_to_symbolic"]
   ]
   by_reason = {
-      "not_recovered": sum(1 for item in failures if not item["recovered"]),
+      "not_recovered":
+      sum(1 for item in failures if not item["recovered"]),
       "not_symbolic_equivalent":
       sum(1 for item in failures if not item["snapped_to_symbolic"]),
       "unstable":
       sum(1 for item in failures if item["snapping_state"] == "unstable"),
-      "numerically_equivalent_indeterminate": sum(
-          1 for item in failures
-          if item["snapping_state"] ==
-          "numerically-equivalent-indeterminate"),
-      "parameter_close_only": sum(
-          1 for item in failures
+      "numerically_equivalent_indeterminate":
+      sum(1 for item in failures
+          if item["snapping_state"] == "numerically-equivalent-indeterminate"),
+      "parameter_close_only":
+      sum(1 for item in failures
           if item["snapping_state"] == "parameter-close-only"),
-      "not_equivalent": sum(
-          1 for item in failures
+      "not_equivalent":
+      sum(1 for item in failures
           if item["snapping_state"] == "not-equivalent"),
   }
   ranked = sorted(
@@ -385,8 +384,10 @@ def aggregate(results: List[Dict[str, Any]]) -> Dict[str, Any]:
       "depth_min": min(item["depth"] for item in results),
       "depth_max": max(item["depth"] for item in results),
       "runs": total,
-      "seed_set": sorted({int(item["seed"]) for item in results}),
-      "task_set": sorted({str(item["task"]) for item in results}),
+      "seed_set": sorted({int(item["seed"])
+                          for item in results}),
+      "task_set": sorted({str(item["task"])
+                          for item in results}),
       "recovery_rate": recovered / total,
       "snap_to_symbolic_rate": snapped / total,
       "snapping_state_counts": state_counts,
@@ -406,7 +407,8 @@ def aggregate(results: List[Dict[str, Any]]) -> Dict[str, Any]:
   }
 
 
-def build_summary(sample_count: int, seeds: List[int], steps: int) -> Dict[str, Any]:
+def build_summary(sample_count: int, seeds: List[int],
+                  steps: int) -> Dict[str, Any]:
   """Build a full SR research summary for the configured task set."""
   task_metrics: List[Dict[str, Any]] = []
   all_runs: List[Dict[str, Any]] = []
@@ -414,8 +416,8 @@ def build_summary(sample_count: int, seeds: List[int], steps: int) -> Dict[str, 
     spec = task_spec(task_name)
     dataset = make_dataset(task_name, sample_count)
     runs = [
-        train_depth(task_name, depth, dataset, seed, steps)
-        for seed in seeds for depth in DEPTHS
+        train_depth(task_name, depth, dataset, seed, steps) for seed in seeds
+        for depth in DEPTHS
     ]
     all_runs.extend(runs)
     task_metrics.append({
@@ -427,23 +429,31 @@ def build_summary(sample_count: int, seeds: List[int], steps: int) -> Dict[str, 
     })
   overall_metrics = aggregate(all_runs)
   return {
-      "schema": "eml-rs.sr-research-benchmark.v2",
-      "generated_at": datetime.now(timezone.utc).isoformat(),
-      "platform_scope": "linux-primary-non-blocking-nightly",
+      "schema":
+      "eml-rs.sr-research-benchmark.v2",
+      "generated_at":
+      datetime.now(timezone.utc).isoformat(),
+      "platform_scope":
+      "linux-primary-non-blocking-nightly",
       "tasks": [{
           "name": task_name,
           "template": task_spec(task_name)["template"],
           "family": task_spec(task_name)["family"],
           "target_params": task_spec(task_name)["target_params"],
       } for task_name in task_names()],
-      "sample_count": sample_count,
-      "seed_set": seeds,
-      "depths": DEPTHS,
-      "steps": steps,
+      "sample_count":
+      sample_count,
+      "seed_set":
+      seeds,
+      "depths":
+      DEPTHS,
+      "steps":
+      steps,
       "snapping_rules": {
           "expression_equivalence":
           "fixed-template-family proxy via parameter RMSE; no algebraic canonicalization",
-          "parameter_rmse_tolerance": SNAP_PARAM_RMSE_THRESHOLD,
+          "parameter_rmse_tolerance":
+          SNAP_PARAM_RMSE_THRESHOLD,
           "numerical_equivalence": {
               "sample_domain": "x in [-2.0, 2.0] over the generated dataset",
               "max_abs_error_tolerance": NUMERICAL_EQUIVALENCE_MAX_ABS_ERROR,
@@ -452,9 +462,12 @@ def build_summary(sample_count: int, seeds: List[int], steps: int) -> Dict[str, 
           "indeterminate_state":
           "numerically equivalent but parameter RMSE exceeds tolerance, e.g. periodic trig aliases",
       },
-      "metrics": overall_metrics,
-      "task_metrics": task_metrics,
-      "runs": all_runs,
+      "metrics":
+      overall_metrics,
+      "task_metrics":
+      task_metrics,
+      "runs":
+      all_runs,
       "governance": {
           "track": "symbolic-regression-research",
           "blocking_gate": False,
@@ -466,20 +479,19 @@ def build_summary(sample_count: int, seeds: List[int], steps: int) -> Dict[str, 
 
 def format_run_reference(run: Dict[str, Any]) -> str:
   """Render a compact Markdown-friendly run reference."""
-  return (
-      "task={task} seed={seed} depth={depth} state={state} "
-      "loss={loss:.6e} rmse={rmse:.6e} max_abs={max_abs:.6e} bad={bad} "
-      "wall_ms={wall:.3f}").format(
-          task=run["task"],
-          seed=run["seed"],
-          depth=run["depth"],
-          state=run["snapping_state"],
-          loss=run["final_loss"],
-          rmse=run["param_rmse"],
-          max_abs=run["max_abs_error"],
-          bad=run["nan_overflow_incidence"],
-          wall=run["wall_time_ms"],
-      )
+  return ("task={task} seed={seed} depth={depth} state={state} "
+          "loss={loss:.6e} rmse={rmse:.6e} max_abs={max_abs:.6e} bad={bad} "
+          "wall_ms={wall:.3f}").format(
+              task=run["task"],
+              seed=run["seed"],
+              depth=run["depth"],
+              state=run["snapping_state"],
+              loss=run["final_loss"],
+              rmse=run["param_rmse"],
+              max_abs=run["max_abs_error"],
+              bad=run["nan_overflow_incidence"],
+              wall=run["wall_time_ms"],
+          )
 
 
 def render_markdown(summary: Dict[str, Any]) -> str:
@@ -554,16 +566,15 @@ def render_markdown(summary: Dict[str, Any]) -> str:
         f"- Template: `{task_metrics['template']}`",
         f"- Best run: `{format_run_reference(metrics_row['best_run'])}`",
         f"- Worst run: `{format_run_reference(metrics_row['worst_run'])}`",
-        "- Snapping states: `{}`".format(
-            metrics_row["snapping_state_counts"]),
+        "- Snapping states: `{}`".format(metrics_row["snapping_state_counts"]),
         "- Failure summary: `{}`".format(
             metrics_row["failure_summary"]["by_reason"]),
     ])
     examples = metrics_row["failure_summary"]["examples"]
     if examples:
       lines.append("- Failure examples:")
-      lines.extend(
-          f"  - `{format_run_reference(example)}`" for example in examples)
+      lines.extend(f"  - `{format_run_reference(example)}`"
+                   for example in examples)
     lines.append("")
   return "\n".join(lines)
 

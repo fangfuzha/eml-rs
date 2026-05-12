@@ -69,12 +69,18 @@
 4. 统一表达没有被误读成“直接替代所有 kernel”。`scope`、`developer-guide` 与 `interoperability` 都保留了反降级方向。
 5. 论文启发的 SR 相关基础设施已有雏形。当前已有 `symbolic_derivative`、表达式简化、训练模板与示例环路。
 
-### 当前仍缺的“论文级”能力
+### 当前已补齐的“论文级”资产
 
-1. 缺少一份机器可读的“论文基集重建目录”。仓库能 lower/eval 很多函数，但没有把论文 Table 1 / 发现链条转成可消费资产。
-2. 缺少对论文“发现流程”的可复现层。当前 `verify` 证明的是数值一致性，不是 `VerifyBaseSet` 意义上的基集完备性回放。
-3. 缺少对“最短已知 EML 形式”或“见证公式”的治理。现在更像编译器项目，不像可审计的论文复现项目。
-4. 缺少以“树深度 / 恢复成功率 / snapping 成功率”为核心指标的 SR 实验面。当前示例更偏 API 演示。
+1. `docs/paper-basis-catalog.json` 已成为机器可读的 paper-basis 事实源，记录 Table 1 能力、覆盖状态、见证式、来源与测试锚点。
+2. `tests/paper_reproduction.rs` 已提供轻量 `VerifyBaseSet` 风格 replay，比较 pure EML witness、lowering 结果与 source reference。
+3. `scripts/paper_reproduction_summary.py` 已输出 schema v2 摘要，包含覆盖率、missing/partial 明细、witness provenance 与可选严格 gate 参数。
+4. `scripts/sr_research_benchmark.py` 已形成独立 SR 研究面，按任务、深度、seed 聚合 recovery、snapping、稳定性与耗时指标。
+
+### 后续仍需审阅的边界
+
+1. paper reproduction 默认仍是 nightly / `workflow_dispatch` artifact；是否升级为主 CI 阻断项，需要等待 artifact 历史稳定后再决定。
+2. 当前 witness 治理记录的是可审计构造，不承诺“最短已知 EML 形式”；若要追踪最短式，需要单独定义 provenance 与审阅流程。
+3. SR recovery rate 继续作为研究指标，不作为发布阻断条件，也不与 runtime 性能 gate 混合。
 
 ### 用这篇论文指导后续开发时的判断规则
 
@@ -85,10 +91,10 @@
 
 ### 建议的下一阶段开发方向
 
-1. 增加“论文基集资产层”: 把论文中的基础函数、见证公式、最短已知形式、适用域整理成 JSON 或 Markdown 索引。
-2. 增加“论文复现验证层”: 做一个轻量 Rust 版 completeness harness，至少能回放部分基集见证公式与发现链。
-3. 增加“SR 研究基准层”: 以树深、参数数、恢复成功率和数值稳定性为指标，独立于主执行基准。
-4. 保持“运行时系统”与“论文复现系统”分层，避免把搜索/发现逻辑塞进核心执行路径。
+1. 收集若干轮 nightly artifact，观察 paper reproduction 与 SR research 输出是否稳定。
+2. 在正式发布 `v0.2.0` 前运行 release 检查清单，并确认 release notes 没有夸大 paper-basis 完备性。
+3. 若要继续贴近论文发现流程，优先补“最短式 / 搜索 provenance”治理，而不是把搜索逻辑放进核心 runtime。
+4. 若要继续推进工程能力，优先完善反降级后端与平台互操作，保持 paper-basis 与 repo-extension 两条治理链路分离。
 
 ### 对“是否要把论文核心提炼成单独 md 文件”的结论
 
@@ -167,12 +173,25 @@
 4. The repository does not misread the paper as a demand to replace every native kernel.
 5. SR-related building blocks already exist, but remain appropriately research-scoped.
 
-### What is still missing at paper fidelity level
+### Paper-fidelity assets now in place
 
-1. A machine-readable catalog of the paper basis, witness formulas, and discovery chain.
-2. A reproducible completeness harness closer to `VerifyBaseSet`, instead of only runtime sample validation.
-3. Governance for shortest-known EML witnesses or audited constructions.
-4. A dedicated SR experiment surface centered on tree depth, recovery rate, snapping rate, and stability.
+1. `docs/paper-basis-catalog.json` is now the machine-readable paper-basis source of truth, covering Table 1 capabilities, coverage status, witnesses, provenance, and test anchors.
+2. `tests/paper_reproduction.rs` provides a lightweight `VerifyBaseSet`-style replay comparing pure EML witnesses, lowering output, and source references.
+3. `scripts/paper_reproduction_summary.py` emits a schema v2 summary with coverage ratio, missing/partial detail, witness provenance, and optional strict-gate arguments.
+4. `scripts/sr_research_benchmark.py` is now a separate SR research surface that aggregates recovery, snapping, stability, and wall-time metrics by task, depth, and seed.
+
+### Remaining review boundaries
+
+1. Paper reproduction remains a nightly / `workflow_dispatch` artifact by default; promotion into a main blocking CI gate should wait for stable artifact history.
+2. Current witness governance records auditable constructions, not shortest-known EML forms. Shortest-form tracking needs separate provenance and review rules.
+3. SR recovery rate stays a research metric, not a release blocker, and remains separate from runtime performance gates.
+
+### Suggested next development direction
+
+1. Collect several nightly artifact runs and review whether paper reproduction and SR research outputs stay stable.
+2. Before a formal `v0.2.0`, run the release checklist and confirm the notes do not overstate paper-basis completeness.
+3. If the project moves closer to the paper's discovery workflow, add shortest-form/search provenance governance before adding search logic to the runtime.
+4. If the project moves toward engineering integration, prioritize de-lowering backends and platform interop while keeping paper-basis and repo-extension governance separate.
 
 ### Decision for future development
 
