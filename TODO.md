@@ -263,7 +263,7 @@
 - [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证旧 run `25716323482` 可下载；当前提交 `63b59a3` 的 `workflow_dispatch` run `25736267664` / `25736269954` 已产出并下载 v2 schema artifacts；多轮 scheduled nightly 稳定性仍待积累）
 - [x] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
 - [x] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
-- [ ] 创建并验证 `v0.2.0` tag / GitHub Release / release assets
+- [x] 创建并验证 `v0.2.0` tag / GitHub Release / release assets（tag 指向 `6d80d31`；release workflow run `25736978435` 通过；GitHub Release 已发布并包含 macOS / Ubuntu / Windows 三个平台 zip assets）
 
 ## P29: API 收敛
 
