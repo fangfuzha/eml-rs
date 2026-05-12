@@ -275,7 +275,7 @@
 
 - [ ] 累积 nightly artifact 历史后，评估 paper reproduction summary 是否升级为更强门禁
 - [ ] 继续保持 SR recovery rate 为非阻断研究指标，不纳入发布阻断条件
-- [ ] 若继续贴近论文发现流程，先定义最短式 / 搜索 provenance 治理，再考虑实现搜索 harness
+- [x] 若继续贴近论文发现流程，先定义最短式 / 搜索 provenance 治理，再考虑实现搜索 harness（已定义治理协议；search harness 实现仍是后续决策）
 
 ## 后续执行顺序（P22+，已核验）
 

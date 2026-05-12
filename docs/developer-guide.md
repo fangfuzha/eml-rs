@@ -20,6 +20,17 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - 进行语义边界、函数覆盖、论文复现相关开发前，优先阅读 `docs/eml-paper-summary.md`，把它当作论文到工程约束的权威入口。
 - 在判断某个函数属于论文原始基集还是仓库扩展模板时，查 `docs/paper-basis-catalog.md`，不要只看 README 中的支持函数示例。
 
+### 论文发现搜索治理
+
+实现任何最短式搜索或公式发现 harness 前，先冻结搜索 provenance 记录。搜索结果只有在记录完整时才能进入 release artifact 或论文复现说明。
+
+- 目标函数：默认按 `source_node_count` 最小化；并列时依次比较纯 EML 节点数、表达式深度、cost model 估值、规范化表达式字典序。
+- 搜索边界：必须记录允许的 paper-basis op、常量集合、最大深度、最大节点数、采样域、`EvalPolicy`、优化 pass 与随机 seed。
+- 证明等级：`exhaustive-bounded` 只能声明“给定边界内最短”；`heuristic` / `sampled` 只能声明“当前搜索找到的最短候选”，不能写成全局最短。
+- 验证要求：候选式必须通过 source reference、lowering result、pure EML witness 的数值一致性检查，并声明误差阈值、样本域和不可判定样本处理方式。
+- 资产格式：未来搜索 artifact 必须包含 `schema`、`git_sha`、`catalog_schema`、`search_space`、`objective`、`proof_level`、`candidate`、`validation` 与 `non_goals` 字段。
+- 门禁策略：搜索 artifact 初期只允许作为 nightly / `workflow_dispatch` 非阻断研究产物；升级为 gate 前必须先积累多轮历史并通过人工治理决策。
+
 ### 调试路径
 
 - 数值语义问题：先看 `core` 与 `EvalPolicy`。
@@ -64,6 +75,17 @@ python scripts/bench_gate.py --criterion-dir target/criterion --config benchmark
 - Do not misread the theory as "EML should directly replace every native high-performance kernel."
 - Before working on semantic boundaries, function coverage, or paper-fidelity tasks, read `docs/eml-paper-summary.md` first and treat it as the authoritative paper-to-engineering contract.
 - When deciding whether a function belongs to the original paper basis or to a repository extension, check `docs/paper-basis-catalog.md` instead of relying on README examples alone.
+
+### Paper-Discovery Search Governance
+
+Before implementing any shortest-expression search or formula-discovery harness, freeze a search provenance record. Search results may enter release artifacts or paper-reproduction notes only when that record is complete.
+
+- Objective: minimize `source_node_count` by default; break ties by pure EML node count, expression depth, cost-model estimate, and canonical expression lexicographic order.
+- Search bounds: record allowed paper-basis ops, constants, maximum depth, maximum node count, sample domain, `EvalPolicy`, optimization passes, and random seeds.
+- Proof level: `exhaustive-bounded` may only claim “shortest within the declared bounds”; `heuristic` / `sampled` may only claim “best candidate found by the current search,” never global minimality.
+- Validation: candidates must pass source reference, lowering result, and pure EML witness comparisons, with explicit tolerance, sample domain, and indeterminate-sample handling.
+- Artifact shape: future search artifacts must include `schema`, `git_sha`, `catalog_schema`, `search_space`, `objective`, `proof_level`, `candidate`, `validation`, and `non_goals` fields.
+- Gate policy: search artifacts start as nightly / `workflow_dispatch` non-blocking research outputs; promoting them to gates requires multi-run history and an explicit governance decision.
 
 ### Debugging Path
 

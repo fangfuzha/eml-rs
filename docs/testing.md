@@ -61,6 +61,13 @@
 - 默认产物仍是 `target/sr-research-benchmark.json` 与 `target/sr-research-benchmark.md`。
 - Linux nightly / `workflow_dispatch` 继续上传该产物作为非阻断 artifact，不纳入主 CI 必过门禁，也不与 runtime 性能 gate 混合。
 
+### 论文发现搜索 provenance
+
+- P30 将最短式 / 搜索 provenance 先定义为治理协议，不在当前阶段实现搜索 harness。
+- 未来搜索 artifact 必须声明 `proof_level`：只有 `exhaustive-bounded` 能表达“给定边界内最短”，`heuristic` 与 `sampled` 只能表达“当前搜索找到的最优候选”。
+- 未来搜索 artifact 必须记录 `search_space`、`objective`、`candidate`、`validation` 与 `non_goals`，并引用 `docs/paper-basis-catalog.json` 的 schema 和 git SHA。
+- 搜索结果初期继续作为 nightly / `workflow_dispatch` 非阻断研究 artifact，不能替代 `tests/paper_reproduction.rs` 的 witness replay，也不能影响 runtime 性能 gate。
+
 ### 依赖安全与许可证
 
 - `cargo audit`
@@ -126,6 +133,13 @@
 - The snapping policy now distinguishes parameter closeness `param_rmse <= 0.20`, numerical equivalence over `x in [-2, 2]`, a max absolute error threshold of `1e-3`, and the `numerically-equivalent-indeterminate` state for numerically matched but parameter-divergent runs.
 - Default artifacts remain `target/sr-research-benchmark.json` and `target/sr-research-benchmark.md`.
 - Linux nightly / `workflow_dispatch` continues to upload these artifacts as non-blocking research outputs and keeps them separate from the required runtime-performance gate.
+
+### Paper-Discovery Search Provenance
+
+- P30 defines shortest-expression / search provenance as a governance protocol first; the current phase does not implement a search harness.
+- Future search artifacts must declare `proof_level`: only `exhaustive-bounded` may say “shortest within the declared bounds,” while `heuristic` and `sampled` may only say “best candidate found by the current search.”
+- Future search artifacts must record `search_space`, `objective`, `candidate`, `validation`, and `non_goals`, and cite the `docs/paper-basis-catalog.json` schema plus git SHA.
+- Search results start as nightly / `workflow_dispatch` non-blocking research artifacts. They must not replace the `tests/paper_reproduction.rs` witness replay and must not affect runtime performance gates.
 
 ### Dependency Security And Licensing
 
