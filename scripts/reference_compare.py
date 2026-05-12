@@ -83,10 +83,15 @@ def _eval_node(op: str, attrs: dict[str, Any], inputs: list[Any], sample: list[f
         "asin": backend.arcsin,
         "acos": backend.arccos,
         "atan": backend.arctan,
+        "asinh": backend.arcsinh,
+        "acosh": backend.arccosh,
+        "atanh": backend.arctanh,
         "sqrt": backend.sqrt,
     }
     if op in unary:
         return unary[op](inputs[0])
+    if op == "hypot":
+        return backend.hypot(inputs[0], inputs[1])
     if op == "sigmoid":
         return _sigmoid(inputs[0], backend)
     if op == "softplus" or op == "relu_soft":
@@ -148,8 +153,15 @@ def _run_torch(graph: dict[str, Any], samples: list[list[float]]) -> list[float]
         "arcsin",
         "arccos",
         "arctan",
+        "hypot",
     ]:
         setattr(TorchBackend, name, staticmethod(getattr(torch, name)))
+    for graph_name, torch_name in [
+        ("arcsinh", "asinh"),
+        ("arccosh", "acosh"),
+        ("arctanh", "atanh"),
+    ]:
+        setattr(TorchBackend, graph_name, staticmethod(getattr(torch, torch_name)))
     return [_as_float(_eval_graph(graph, sample, TorchBackend)) for sample in samples]
 
 

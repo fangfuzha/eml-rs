@@ -244,6 +244,39 @@
 - [x] 更新 README / user-guide / developer-guide 中的 `paper-basis` 入口，确保使用者能从首页找到复现资产
 - [x] 在发布说明中明确 `repo-extension` 训练模板仍是工程扩展，不作为论文 Table 1 完备性声明的一部分
 
+## P26: 互操作闭环
+
+- [x] 补齐 `scripts/reference_compare.py` 对 P22 新增 portable graph op（`asinh/acosh/atanh/hypot`）的 NumPy / Torch 对照支持
+- [x] 增加 portable graph 到外部参考脚本的端到端回归测试，避免导出 schema 与脚本支持面漂移
+- [x] 为 portable graph JSON 增加轻量 schema validator，覆盖必需字段、节点 id、root、输入索引与 op 支持面
+- [ ] 评估 CLI 是否需要 `eml export portable` 子命令，降低外部工具消费门槛
+
+## P27: 文档与门禁一致性
+
+- [x] 修正 bytecode batch 自动并行阈值 rustdoc，将 `min_samples_per_worker` 与实际默认值 `256` 对齐
+- [x] 修正文档中“每次 PR 跑 benchmark”的过期表述，明确性能 gate 由 nightly / `workflow_dispatch` 的 `bench-only` 路径执行
+- [ ] 决策：是否增加一个 PR 级轻量 smoke benchmark，还是继续只在 nightly / 手动 workflow 中阻断性能回退
+
+## P28: `v0.2.0` 发布候选收口
+
+- [ ] 执行 `docs/releases/v0.2.0/verification.md` 全套 release 前检查
+- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定
+- [ ] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
+- [ ] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
+- [ ] 创建并验证 `v0.2.0` tag / GitHub Release / release assets
+
+## P29: API 收敛
+
+- [ ] 梳理 Stable API 是否足以覆盖 README 推荐工作流，减少用户直接依赖实验模块的必要性
+- [ ] 为 portable graph 与 CLI 导出入口补稳定性说明和迁移策略
+- [ ] 复审 `compile_expression()` 的弃用周期，决定在 `0.2.x` 保留还是计划后续移除
+
+## P30: 研究增强与长期治理
+
+- [ ] 累积 nightly artifact 历史后，评估 paper reproduction summary 是否升级为更强门禁
+- [ ] 继续保持 SR recovery rate 为非阻断研究指标，不纳入发布阻断条件
+- [ ] 若继续贴近论文发现流程，先定义最短式 / 搜索 provenance 治理，再考虑实现搜索 harness
+
 ## 后续执行顺序（P22+，已核验）
 
 - [x] 先完成 P22 的 paper-basis 缺口补齐，再考虑 P23 的 gate 升级

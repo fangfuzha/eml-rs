@@ -75,6 +75,99 @@ pub fn expr_to_portable_json(expr: &Expr) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(&expr_to_portable_graph(expr))
 }
 
+/// 校验 portable graph JSON value 的基础结构。
+///
+/// 校验范围保持轻量：schema、graph kind、节点 id、root、输入索引、attrs
+/// 类型与当前支持的 op arity。它不执行数值语义验证。
+pub fn validate_portable_graph(graph: &Value) -> Result<(), String> {
+    let schema = graph
+        .get("schema")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing string field: schema".to_string())?;
+    if schema != SCHEMA {
+        return Err(format!("unsupported schema: {schema}"));
+    }
+
+    let graph_kind = graph
+        .get("graph_kind")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "missing string field: graph_kind".to_string())?;
+    if graph_kind != "source_expr" && graph_kind != "eml_expr" {
+        return Err(format!("unsupported graph_kind: {graph_kind}"));
+    }
+
+    let nodes = graph
+        .get("nodes")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "missing array field: nodes".to_string())?;
+    if nodes.is_empty() {
+        return Err("nodes must not be empty".to_string());
+    }
+
+    let root = graph
+        .get("root")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| "missing unsigned integer field: root".to_string())? as usize;
+    if root >= nodes.len() {
+        return Err(format!("root index out of bounds: {root}"));
+    }
+
+    for (expected_id, node) in nodes.iter().enumerate() {
+        let id = node
+            .get("id")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| format!("node {expected_id} missing unsigned integer field: id"))?
+            as usize;
+        if id != expected_id {
+            return Err(format!(
+                "node id mismatch: expected {expected_id}, got {id}"
+            ));
+        }
+
+        let op = node
+            .get("op")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("node {id} missing string field: op"))?;
+        let attrs = node
+            .get("attrs")
+            .and_then(Value::as_object)
+            .ok_or_else(|| format!("node {id} missing object field: attrs"))?;
+        validate_attrs(op, attrs)?;
+
+        let inputs = node
+            .get("inputs")
+            .and_then(Value::as_array)
+            .ok_or_else(|| format!("node {id} missing array field: inputs"))?;
+        let expected_arity = op_arity(graph_kind, op)
+            .ok_or_else(|| format!("unsupported op for {graph_kind}: {op}"))?;
+        if inputs.len() != expected_arity {
+            return Err(format!(
+                "node {id} op {op} expected {expected_arity} inputs, got {}",
+                inputs.len()
+            ));
+        }
+        for input in inputs {
+            let input_id = input
+                .as_u64()
+                .ok_or_else(|| format!("node {id} has non-integer input"))?
+                as usize;
+            if input_id >= expected_id {
+                return Err(format!(
+                    "node {id} input {input_id} must refer to an earlier node"
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// 解析并校验 portable graph JSON 字符串。
+pub fn validate_portable_json(input: &str) -> Result<(), String> {
+    let graph: Value = serde_json::from_str(input).map_err(|err| err.to_string())?;
+    validate_portable_graph(&graph)
+}
+
 #[derive(Default)]
 struct Builder {
     nodes: Vec<Value>,
@@ -176,4 +269,52 @@ impl Builder {
             }
         }
     }
+}
+
+fn op_arity(graph_kind: &str, op: &str) -> Option<usize> {
+    match graph_kind {
+        "eml_expr" => match op {
+            "one" | "var" => Some(0),
+            "eml" => Some(2),
+            _ => None,
+        },
+        "source_expr" => match op {
+            "var" | "int" | "rational" | "const_e" | "const_i" | "const_pi" => Some(0),
+            "neg" | "exp" | "log" | "sin" | "cos" | "tan" | "sinh" | "cosh" | "tanh" | "asin"
+            | "acos" | "atan" | "asinh" | "acosh" | "atanh" | "sqrt" | "sigmoid" | "softplus"
+            | "swish" | "gelu_tanh" | "relu_soft" | "softsign" | "mish" => Some(1),
+            "add" | "sub" | "mul" | "div" | "pow" | "elu" | "leaky_relu" | "hypot" => Some(2),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn validate_attrs(op: &str, attrs: &serde_json::Map<String, Value>) -> Result<(), String> {
+    match op {
+        "var" => {
+            if !attrs.get("index").is_some_and(Value::is_u64) {
+                return Err("var attrs.index must be an unsigned integer".to_string());
+            }
+        }
+        "int" => {
+            if !attrs.get("value").is_some_and(Value::is_i64) {
+                return Err("int attrs.value must be an integer".to_string());
+            }
+        }
+        "rational" => {
+            let numerator_ok = attrs.get("numerator").is_some_and(Value::is_i64);
+            let denominator = attrs.get("denominator").and_then(Value::as_i64);
+            if !numerator_ok || denominator.is_none() {
+                return Err(
+                    "rational attrs.numerator and attrs.denominator must be integers".to_string(),
+                );
+            }
+            if denominator == Some(0) {
+                return Err("rational attrs.denominator must not be zero".to_string());
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }

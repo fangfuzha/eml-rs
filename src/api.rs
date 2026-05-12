@@ -294,7 +294,7 @@ impl CompiledPipeline {
     ///
     /// For the `Bytecode` backend, large batches may automatically switch to
     /// sample-level parallel execution using the Bytecode-specific default
-    /// policy (`workers <= 8`, `min_samples_per_worker = 512`).
+    /// policy (`workers <= 8`, `min_samples_per_worker = 256`).
     pub fn eval_complex_batch(
         &self,
         backend: BuiltinBackend,
@@ -330,7 +330,7 @@ impl CompiledPipeline {
     ///
     /// For the `Bytecode` backend, large batches may automatically switch to
     /// sample-level parallel execution using the Bytecode-specific default
-    /// policy (`workers <= 8`, `min_samples_per_worker = 512`).
+    /// policy (`workers <= 8`, `min_samples_per_worker = 256`).
     pub fn eval_real_batch(
         &self,
         backend: BuiltinBackend,

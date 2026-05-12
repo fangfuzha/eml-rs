@@ -42,8 +42,8 @@
 
 ### 性能回归
 
-- 每次 PR 运行 `cargo bench --bench eval_bench`
-- 用 `scripts/bench_gate.py` 对比门槛
+- 主 CI 跑格式、clippy、测试、覆盖率、兼容性与供应链检查；性能门禁由 nightly / `workflow_dispatch` 的 `bench-only` 路径运行。
+- `bench-only` 运行 `cargo bench --bench eval_bench`，并用 `scripts/bench_gate.py` 对比门槛。
 - 基准覆盖包含 `softmax_ce_*_batch32/256/1024/4096` 与 `lower_verify_1k/10k/100k_nodes`
 - 重点门禁仍聚焦：`shared_eml_*`、`softmax_ce_*_batch1024`、`lower_verify_10k_nodes`
 - Tree/RPN 阈值拐点与 Bytecode 并行候选评估已拆到 `cargo bench --bench parallel_bench`；Linux 上使用 `nightly.yml` 的 `parallel-bench-only` 手动入口运行，不直接纳入主 gate。
@@ -107,8 +107,8 @@
 
 ### Performance Regression
 
-- Run `cargo bench --bench eval_bench` on every PR
-- Enforce thresholds with `scripts/bench_gate.py`
+- Main CI runs formatting, clippy, tests, coverage, compatibility, and supply-chain checks; performance gates run through nightly / `workflow_dispatch` `bench-only`.
+- `bench-only` runs `cargo bench --bench eval_bench` and enforces thresholds with `scripts/bench_gate.py`.
 - Coverage includes `softmax_ce_*_batch32/256/1024/4096` and `lower_verify_1k/10k/100k_nodes`
 - Primary blocking workloads remain: `shared_eml_*`, `softmax_ce_*_batch1024`, `lower_verify_10k_nodes`
 - Tree/RPN threshold probing and Bytecode parallel candidate evaluation live in `cargo bench --bench parallel_bench`; on Linux they run through the manual `parallel-bench-only` target in `nightly.yml` and stay outside the main blocking gate for now.

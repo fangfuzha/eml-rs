@@ -43,8 +43,8 @@
 | 类别                     | 门槛                              | 执行方式                                                                                                                           |
 | ------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `verify + lowering` 延迟 | `10k nodes` 基准 `P99 <= 25ms`    | `CI enforced`：`lower_verify_10k_nodes`                                                                                            |
-| `bytecode/tree` 比值     | `median <= 0.85` 且 `P99 <= 0.95` | `CI enforced`：`shared_eml_*` 与 `softmax_ce_*_batch1024` 基准门禁                                                                 |
-| `RPN/tree` 比值          | `median <= 1.10`                  | `CI enforced`：`eml_ln_rpn_eval` 对比门禁                                                                                          |
+| `bytecode/tree` 比值     | `median <= 0.85` 且 `P99 <= 0.95` | `nightly/workflow_dispatch enforced`：`shared_eml_*` 与 `softmax_ce_*_batch1024` 基准门禁                                           |
+| `RPN/tree` 比值          | `median <= 1.10`                  | `nightly/workflow_dispatch enforced`：`eml_ln_rpn_eval` 对比门禁                                                                    |
 | 峰值内存                 | `1M nodes <= 1.0GB`               | `manual tool enforced`：`python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`；nightly 使用 `100k nodes` 轻量采样 |
 | 冷启动                   | `<= 800ms`                        | `manual tool enforced`：`python3 scripts/collect_metrics.py` 输出 `cold_start.median_ms` 并按阈值返回状态                          |
 
@@ -72,7 +72,7 @@
 | -------------- | ---------------------------------------------- | ----------------------------------------- |
 | Rust crate     | 根 crate 与 workspace 成员可构建、可测试       | `CI enforced`                             |
 | C ABI          | `cdylib` 构建路径保持可用                      | `CI enforced`：`cargo build --release -q` |
-| Benchmark gate | 缺少必需基准或性能退化超过阈值时必须阻断       | `CI enforced`                             |
+| Benchmark gate | 缺少必需基准或性能退化超过阈值时必须阻断       | `nightly/workflow_dispatch enforced`      |
 | 版本现实约束   | 本项目是个人维护项目，发布节奏是目标而非硬 SLA | `manual audit`                            |
 
 ### 说明
@@ -124,8 +124,8 @@ Recommended `v0.2.0` research target: auditable paper reproduction. At minimum, 
 | Category                    | Threshold                                   | Enforcement                                                                                                                                    |
 | --------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `verify + lowering` latency | `P99 <= 25ms` for the `10k nodes` benchmark | `CI enforced`: `lower_verify_10k_nodes`                                                                                                        |
-| `bytecode/tree` ratio       | `median <= 0.85` and `P99 <= 0.95`          | `CI enforced`: `shared_eml_*` and `softmax_ce_*_batch1024` benchmark gate                                                                      |
-| `RPN/tree` ratio            | `median <= 1.10`                            | `CI enforced`: `eml_ln_rpn_eval` ratio gate                                                                                                    |
+| `bytecode/tree` ratio       | `median <= 0.85` and `P99 <= 0.95`          | `nightly/workflow_dispatch enforced`: `shared_eml_*` and `softmax_ce_*_batch1024` benchmark gate                                                |
+| `RPN/tree` ratio            | `median <= 1.10`                            | `nightly/workflow_dispatch enforced`: `eml_ln_rpn_eval` ratio gate                                                                              |
 | Peak memory                 | `1M nodes <= 1.0GB`                         | `manual tool enforced`: `python3 scripts/collect_metrics.py --rss-nodes 1000000 --require-rss`; nightly uses a lightweight `100k nodes` sample |
 | Cold start                  | `<= 800ms`                                  | `manual tool enforced`: `python3 scripts/collect_metrics.py` emits `cold_start.median_ms` and exits according to the threshold                 |
 
@@ -153,7 +153,7 @@ Recommended `v0.2.0` research target: auditable paper reproduction. At minimum, 
 | ---------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------- |
 | Rust crate                   | The root crate and workspace members must build and test successfully             | `CI enforced`                             |
 | C ABI                        | The `cdylib` build path must remain valid                                         | `CI enforced`: `cargo build --release -q` |
-| Benchmark gate               | Missing required benchmarks or threshold regressions must block the pipeline      | `CI enforced`                             |
+| Benchmark gate               | Missing required benchmarks or threshold regressions must block the pipeline      | `nightly/workflow_dispatch enforced`      |
 | Personal-maintenance reality | This is a personal project, so release cadence is a target rather than a hard SLA | `manual audit`                            |
 
 ### Notes
