@@ -260,7 +260,7 @@
 ## P28: `v0.2.0` 发布候选收口
 
 - [x] 执行 `docs/releases/v0.2.0/verification.md` 本地 release 前检查（远端 release/tag 检查仍随最终发布执行）
-- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证 run `25716323482` 可下载；v2 schema 多轮远端稳定性需在本次变更合入后继续核验）
+- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证旧 run `25716323482` 可下载；当前提交 `63b59a3` 的 `workflow_dispatch` run `25736267664` / `25736269954` 已产出并下载 v2 schema artifacts；多轮 scheduled nightly 稳定性仍待积累）
 - [x] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
 - [x] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
 - [ ] 创建并验证 `v0.2.0` tag / GitHub Release / release assets
