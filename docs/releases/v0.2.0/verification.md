@@ -24,6 +24,7 @@
 
 - nightly / `workflow_dispatch` 的 `paper-reproduction-summary` artifact 可下载。
 - nightly / `workflow_dispatch` 的 `sr-research-benchmark` artifact 可下载。
+- 下载 artifact 后运行 `python scripts/nightly_artifact_audit.py --artifact-root <download-dir> --require-paper-all-covered --require-sr-non-blocking --output-json target/nightly-artifact-audit.json --output-md target/nightly-artifact-audit.md`，核对 v2 schema、paper 覆盖率与 SR 非阻断策略。
 - README、`docs/user-guide.md`、`docs/developer-guide.md`、`docs/releases/v0.2.0/` 均能指向 `paper-basis` 入口。
 - 发布说明中必须明确：`repo-extension` 训练模板不属于论文基集完备性声明。
 
@@ -65,6 +66,7 @@
 
 - The nightly / `workflow_dispatch` `paper-reproduction-summary` artifact must be downloadable.
 - The nightly / `workflow_dispatch` `sr-research-benchmark` artifact must be downloadable.
+- After downloading artifacts, run `python scripts/nightly_artifact_audit.py --artifact-root <download-dir> --require-paper-all-covered --require-sr-non-blocking --output-json target/nightly-artifact-audit.json --output-md target/nightly-artifact-audit.md` to verify v2 schemas, paper coverage, and the SR non-blocking policy.
 - `README.md`, `docs/user-guide.md`, `docs/developer-guide.md`, and `docs/releases/v0.2.0/` must all point users toward the `paper-basis` entry points.
 - Release notes must explicitly state that `repo-extension` training templates are outside any paper-basis completeness claim.
 

@@ -260,7 +260,7 @@
 ## P28: `v0.2.0` 发布候选收口
 
 - [x] 执行 `docs/releases/v0.2.0/verification.md` 本地 release 前检查（远端 release/tag 检查仍随最终发布执行）
-- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证旧 run `25716323482` 可下载；当前提交 `63b59a3` 的 `workflow_dispatch` run `25736267664` / `25736269954` 已产出并下载 v2 schema artifacts；多轮 scheduled nightly 稳定性仍待积累）
+- [ ] 确认最近多轮 nightly paper reproduction / SR research artifact 可下载且结构稳定（已验证旧 run `25716323482` 可下载；当前提交 `63b59a3` 的 `workflow_dispatch` run `25736267664` / `25736269954` 已产出并下载 v2 schema artifacts；已新增 `scripts/nightly_artifact_audit.py` 辅助多轮审计；多轮 scheduled nightly 稳定性仍待积累）
 - [x] 将 `Cargo.toml` 与 workspace crate 版本从 `0.1.1` bump 到 `0.2.0`
 - [x] 将 `docs/releases/v0.2.0/` 从草案措辞收束为正式 release snapshot
 - [x] 创建并验证 `v0.2.0` tag / GitHub Release / release assets（tag 指向 `6d80d31`；release workflow run `25736978435` 通过；GitHub Release 已发布并包含 macOS / Ubuntu / Windows 三个平台 zip assets）
@@ -273,7 +273,7 @@
 
 ## P30: 研究增强与长期治理
 
-- [ ] 累积 nightly artifact 历史后，评估 paper reproduction summary 是否升级为更强门禁
+- [ ] 累积 nightly artifact 历史后，评估 paper reproduction summary 是否升级为更强门禁（后续可用 `scripts/nightly_artifact_audit.py` 汇总多轮 v2 artifact 结构与覆盖率）
 - [x] 继续保持 SR recovery rate 为非阻断研究指标，不纳入发布阻断条件（已由 `nightly-sr-research` 非阻断 artifact、`scripts/sr_research_benchmark.py` 的 artifact policy、`docs/testing.md` 与 release notes 共同固定）
 - [x] 若继续贴近论文发现流程，先定义最短式 / 搜索 provenance 治理，再考虑实现搜索 harness（已定义治理协议；search harness 实现仍是后续决策）
 

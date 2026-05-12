@@ -26,6 +26,7 @@
 - 样本域固定覆盖正实轴、负实轴、零邻域与复平面。
 - `scripts/paper_reproduction_summary.py` 从 `docs/paper-basis-catalog.json` 消费 replayed witness 锚点，产出 schema v2 的 `target/paper-reproduction-summary.json` 与 `target/paper-reproduction-summary.md`，包含覆盖率、missing/partial 明细与 witness provenance。
 - nightly 默认继续上传非阻断 artifact；`workflow_dispatch` 可用 `paper_strict_gate=true` 手动启用 `--require-all-covered --require-no-missing-replayed --require-min-covered-ratio 1.0`。
+- 下载多轮 nightly / `workflow_dispatch` 产物后，可用 `scripts/nightly_artifact_audit.py` 审计 paper summary 与 SR summary 的 schema、覆盖率、非阻断策略和任务/run 结构；该脚本用于 P28/P30 的历史稳定性评估，不会替代 witness replay 测试。
 
 ### 兼容性矩阵
 
@@ -60,6 +61,7 @@
 - snapping 规则显式区分：参数近似阈值 `param_rmse <= 0.20`、数值等价采样域 `x in [-2, 2]`、最大绝对误差阈值 `1e-3`、以及“数值等价但参数未对齐”的 `numerically-equivalent-indeterminate` 状态。
 - 默认产物仍是 `target/sr-research-benchmark.json` 与 `target/sr-research-benchmark.md`。
 - Linux nightly / `workflow_dispatch` 继续上传该产物作为非阻断 artifact，不纳入主 CI 必过门禁，也不与 runtime 性能 gate 混合。
+- `scripts/nightly_artifact_audit.py --require-sr-non-blocking` 会检查 SR artifact 的 `artifact_policy`、`blocking_gate=false`、任务集和 run 明细，作为“SR recovery rate 保持非阻断”的机器可读审计入口。
 
 ### 论文发现搜索 provenance
 
@@ -99,6 +101,7 @@
 - The fixed sample set covers the positive real axis, negative real axis, zero neighborhood, and complex plane.
 - `scripts/paper_reproduction_summary.py` consumes replayed witness anchors from `docs/paper-basis-catalog.json` and emits schema v2 `target/paper-reproduction-summary.json` plus `target/paper-reproduction-summary.md` with coverage ratio, missing/partial details, and witness provenance.
 - Nightly still uploads a non-blocking artifact by default; `workflow_dispatch` can set `paper_strict_gate=true` to enable `--require-all-covered --require-no-missing-replayed --require-min-covered-ratio 1.0` manually.
+- After downloading multi-run nightly / `workflow_dispatch` artifacts, use `scripts/nightly_artifact_audit.py` to audit the paper and SR summary schemas, coverage, non-blocking policies, and task/run structure. The script supports P28/P30 history-stability reviews and does not replace the witness replay tests.
 
 ### Compatibility Matrix
 
@@ -133,6 +136,7 @@
 - The snapping policy now distinguishes parameter closeness `param_rmse <= 0.20`, numerical equivalence over `x in [-2, 2]`, a max absolute error threshold of `1e-3`, and the `numerically-equivalent-indeterminate` state for numerically matched but parameter-divergent runs.
 - Default artifacts remain `target/sr-research-benchmark.json` and `target/sr-research-benchmark.md`.
 - Linux nightly / `workflow_dispatch` continues to upload these artifacts as non-blocking research outputs and keeps them separate from the required runtime-performance gate.
+- `scripts/nightly_artifact_audit.py --require-sr-non-blocking` checks the SR artifact `artifact_policy`, `blocking_gate=false`, task set, and run details as the machine-readable audit entry point for keeping SR recovery rate non-blocking.
 
 ### Paper-Discovery Search Provenance
 
