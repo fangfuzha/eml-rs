@@ -28,11 +28,11 @@
 
 ### 治理链路
 
-| 链路             | 资产/入口                                                                                                    | 门禁策略                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| 论文复现资产     | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | 测试阻断，摘要先非阻断 artifact              |
-| 运行时性能门禁   | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | 关键 benchmark 阻断；指标工具按场景手动/夜间 |
-| 符号回归研究结果 | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly 非阻断 artifact  |
+| 链路             | 资产/入口                                                                                                    | 门禁策略                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| 论文复现资产     | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | 测试阻断，摘要先非阻断 artifact                |
+| 运行时性能门禁   | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | 关键 benchmark 阻断；指标工具按场景手动/夜间   |
+| 符号回归研究结果 | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly 非阻断 artifact    |
 | 论文发现搜索治理 | 未来 search provenance artifact、`docs/developer-guide.md`、`docs/testing.md`                                | 先人工审阅治理协议，后续再决定是否实现 harness |
 
 ### v0.2.0 论文复现目标评估
@@ -110,12 +110,12 @@ Each rule is labeled as either `CI enforced` or `manual audit`.
 
 ### Governance Tracks
 
-| Track                        | Assets / Entry Points                                                                                        | Gate Policy                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| Paper reproduction assets    | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | blocking tests, non-blocking summary artifacts     |
-| Runtime performance gates    | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | key benchmarks block; metrics run manually/nightly |
-| Symbolic-regression research | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly non-blocking artifacts |
-| Paper-discovery search governance | future search provenance artifacts, `docs/developer-guide.md`, `docs/testing.md`                        | manual governance review first; harness implementation is a later decision |
+| Track                             | Assets / Entry Points                                                                                        | Gate Policy                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Paper reproduction assets         | `docs/paper-basis-catalog.*`, `tests/paper_reproduction.rs`, `target/paper-reproduction-summary.*`           | blocking tests, non-blocking summary artifacts                             |
+| Runtime performance gates         | `benchmarks/gate.json`, `benches/`, `scripts/bench_gate.py`, `target/eml-metrics.json`                       | key benchmarks block; metrics run manually/nightly                         |
+| Symbolic-regression research      | `examples/symbolic_regression_loop.rs`, `scripts/sr_research_benchmark.py`, `target/sr-research-benchmark.*` | workflow_dispatch / nightly non-blocking artifacts                         |
+| Paper-discovery search governance | future search provenance artifacts, `docs/developer-guide.md`, `docs/testing.md`                             | manual governance review first; harness implementation is a later decision |
 
 ### v0.2.0 Paper-Reproducibility Target
 
