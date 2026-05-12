@@ -292,15 +292,11 @@ fn op_arity(graph_kind: &str, op: &str) -> Option<usize> {
 
 fn validate_attrs(op: &str, attrs: &serde_json::Map<String, Value>) -> Result<(), String> {
     match op {
-        "var" => {
-            if !attrs.get("index").is_some_and(Value::is_u64) {
-                return Err("var attrs.index must be an unsigned integer".to_string());
-            }
+        "var" if !attrs.get("index").is_some_and(Value::is_u64) => {
+            return Err("var attrs.index must be an unsigned integer".to_string());
         }
-        "int" => {
-            if !attrs.get("value").is_some_and(Value::is_i64) {
-                return Err("int attrs.value must be an integer".to_string());
-            }
+        "int" if !attrs.get("value").is_some_and(Value::is_i64) => {
+            return Err("int attrs.value must be an integer".to_string());
         }
         "rational" => {
             let numerator_ok = attrs.get("numerator").is_some_and(Value::is_i64);

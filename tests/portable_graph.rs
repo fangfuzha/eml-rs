@@ -79,8 +79,21 @@ fn python_command() -> &'static str {
     }
 }
 
+fn numpy_available(python: &str) -> bool {
+    Command::new(python)
+        .args(["-c", "import numpy"])
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
 #[test]
 fn reference_compare_script_supports_p22_portable_ops() {
+    let python = python_command();
+    if !numpy_available(python) {
+        eprintln!("skipping reference_compare.py smoke test because NumPy is not installed");
+        return;
+    }
+
     let source = parse_source_expr("asinh(x0) + acosh(x1) + atanh(x2) + hypot(x0, x2)").unwrap();
     let graph = source_expr_to_portable_json(&source).unwrap();
     let temp = std::env::temp_dir();
@@ -93,7 +106,7 @@ fn reference_compare_script_supports_p22_portable_ops() {
         "{}/scripts/reference_compare.py",
         env!("CARGO_MANIFEST_DIR").replace('\\', "/")
     );
-    let output = Command::new(python_command())
+    let output = Command::new(python)
         .args([
             script.as_str(),
             "--graph",
